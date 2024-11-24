@@ -10,6 +10,7 @@ venv.bak/
 # Distribution / packaging
 .Python
 build/
+dist/
 main.**/
 
 # Build file

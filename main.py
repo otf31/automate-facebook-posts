@@ -83,6 +83,13 @@ def is_logged_in(driver: webdriver.WebDriver):
     return "Groups | Facebook" in driver.title
 
 
+def find_element(driver: webdriver.WebDriver, by: By, value: str):
+    element = driver.find_element(by, value)
+    sleep(1)
+
+    return element
+
+
 def print_panel(
         msg: str,
         msg_type: str = "info"
@@ -218,24 +225,52 @@ def publish(
                     continue
 
                 try:
-                    # Find the Photo/Video element
-                    photo_video_el = driver.find_element(By.XPATH,
-                                                         "//span[text()='Photo/video']")
+                    try:
+                        # Find the Write something element
+                        write_something_el = find_element(
+                            driver,
+                            By.XPATH,
+                            "//span[text()='Write something...']")
+                        write_something_el.click()
+                    except NoSuchElementException:
+                        driver.get(group_url)
+                        sleep(5)
+                        try:
+                            # Otherwise find the Start Discussion element
+                            start_discussion_el = find_element(
+                                driver,
+                                By.XPATH,
+                                "//span[text()='Start discussion']")
+                            start_discussion_el.click()
+                        except NoSuchElementException:
+                            write_something_el = find_element(
+                                driver,
+                                By.XPATH,
+                                "//span[text()='Write something...']")
+                            write_something_el.click()
 
-                    photo_video_el.click()
                     sleep(3)
 
                     # Paste the description
                     textarea = driver.switch_to.active_element
+                    sleep(1)
                     textarea.send_keys(Keys.CONTROL + "v")
                     sleep(2)
 
+                    # Find Photo/Video element and click it
+                    photo_video_el = find_element(
+                        driver,
+                        By.CSS_SELECTOR,
+                        '[aria-label="Photo/video"]')
+                    photo_video_el.click()
+                    sleep(1)
+
                     # Get the file input element
-                    file_input = driver.find_element(By.CSS_SELECTOR,
-                                                     '[accept="image/*,image/heif,'
-                                                     'image/heic,video/*,video/mp4,'
-                                                     'video/x-m4v,video/x-matroska,'
-                                                     '.mkv"]')
+                    file_input = find_element(
+                        driver,
+                        By.CSS_SELECTOR,
+                        '[accept="image/*,image/heif,image/heic,video/*,video/mp4,'
+                        'video/x-m4v,video/x-matroska,.mkv"]')
 
                     # Upload the images
                     files = "\n".join([image.absolute().as_posix() for image in images])
@@ -243,19 +278,23 @@ def publish(
                     sleep(3)
 
                     # Press the Post button
-                    post_button = driver.find_element(By.XPATH,
-                                                      "//span[text()='Post']")
+                    post_button = find_element(
+                        driver,
+                        By.XPATH,
+                        "//span[text()='Post']")
 
                     post_button.click()
                     print_panel(f"The post has been submitted to the group {group_name}")
                     sleep(15)
                 except NoSuchElementException as e:
-                    print_panel(f"Group: {group_name}\n {e.msg}", "warning")
-                    groups_with_errors.append((group_name, group_url))
+                    groups_with_errors.append((group_name, group_url, e.msg))
                     continue
                 except ElementClickInterceptedException as e:
-                    print_panel(f"Group: {group_name}\n {e.msg}", "warning")
-                    groups_with_errors.append((group_name, group_url))
+                    groups_with_errors.append((group_name, group_url, e.msg))
+                    continue
+                # This is a general exception
+                except WebDriverException as e:
+                    groups_with_errors.append((group_name, group_url, e.msg))
                     continue
             except IndexError as e:
                 print_panel(f"{e}", "warning")
@@ -266,7 +305,9 @@ def publish(
     if groups_with_errors:
         print_panel("Groups with errors", "warning")
         for group in groups_with_errors:
-            print_panel(f"Group: {group[0]} - URL: {group[1]}", "warning")
+            print_panel(f"Group: {group[0]} - URL: {group[1]} - {group[2]}", "warning")
+
+    input("Press ENTER to finish the process...")
 
 
 @app.callback()
