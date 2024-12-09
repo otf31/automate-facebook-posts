@@ -9,7 +9,7 @@ import typer
 from rich import print
 from rich.panel import Panel
 from selenium.common import WebDriverException, NoSuchElementException, \
-    ElementClickInterceptedException
+    ElementClickInterceptedException, NoSuchWindowException
 from selenium.webdriver.chrome import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
@@ -77,8 +77,7 @@ def init_driver(
 
 def is_logged_in(driver: webdriver.WebDriver):
     sleep(1)
-    driver.get(facebook_url + "/groups/feed/")
-    sleep(4)
+    navigate(driver, facebook_url + "/groups/feed/")
 
     return "Groups | Facebook" in driver.title
 
@@ -88,6 +87,19 @@ def find_element(driver: webdriver.WebDriver, by: By, value: str):
     sleep(1)
 
     return element
+
+
+def navigate(driver: webdriver.WebDriver, url: str):
+    try:
+        driver.get(url)
+        sleep(5)
+    except NoSuchWindowException as e:
+        print_panel(f"Error: {e.msg}", "error")
+
+
+def exit_app(driver):
+    driver.quit()
+    raise typer.Exit()
 
 
 def print_panel(
@@ -107,6 +119,30 @@ def print_panel(
 
     if msg_type == "error":
         raise typer.Exit()
+
+
+@app.command()
+def login(
+        ctx: typer.Context
+):
+    """
+    Login into Facebook (this command ignore headless option)
+    """
+    # Force no headless mode
+    ctx.obj["headless"] = False
+
+    driver = init_driver(ctx)
+    sleep(3)
+
+    print_panel("Checking if the user is logged in...")
+    if is_logged_in(driver):
+        print_panel("You are already logged in", "warning")
+        exit_app(driver)
+
+    input("Please login manually into your Facebook account, once you are logged in "
+          "press ENTER...")
+
+    exit_app(driver)
 
 
 @app.command()
@@ -181,6 +217,8 @@ def publish(
     with open(description_file_path, "r") as description_file:
         description = description_file.read()
 
+    print_panel(description)
+
     driver = init_driver(ctx)
     sleep(3)
 
@@ -188,13 +226,12 @@ def publish(
     if not is_logged_in(driver):
         print_panel(
             "You are not logged in, please sign in manually into your Facebook account "
-            "and be sure that you are with the right profile",
-            "warning")
+            "using the [blue]login[/blue] command and be sure that you are with the "
+            "right profile",
+            "error")
 
     # Press ENTER to continue
     input("Press ENTER to continue the process...")
-
-    print_panel("Start the task")
 
     groups_with_errors = []
 
@@ -203,7 +240,7 @@ def publish(
         reader = csv.reader(groups_file, delimiter=";")
         rows = list(reader)
 
-        print_panel(f"This post will be published in {len(rows)} groups")
+        print_panel(f"This post is going to be publish in {len(rows)} groups")
 
         # Copy the description to the clipboard
         pyperclip.copy(description.strip())
@@ -216,8 +253,7 @@ def publish(
                 print_panel(f"Group: {group_name} - URL: {group_url}")
 
                 # Navigate to the group with subpath /buy_sell_discussion
-                driver.get(group_url + "buy_sell_discussion")
-                sleep(5)
+                navigate(driver, group_url + "buy_sell_discussion")
 
                 if driver.title == "Facebook":
                     print_panel(f"Group {group_name} does not exist or is not available",
@@ -233,8 +269,8 @@ def publish(
                             "//span[text()='Write something...']")
                         write_something_el.click()
                     except NoSuchElementException:
-                        driver.get(group_url)
-                        sleep(5)
+                        navigate(driver, group_url)
+
                         try:
                             # Otherwise find the Start Discussion element
                             start_discussion_el = find_element(
@@ -355,6 +391,7 @@ def callback(
     """
     # Find available posts
     posts_folder = Path(posts_folder_path)
+
     if not posts_folder.exists():
         print_panel(f"Folder {posts_folder_path} does not exist", "error")
     else:
