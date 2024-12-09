@@ -17,7 +17,7 @@ The CLI app comes with the following features:
 ### Publish posts
 ```shell
 ./autofbpost publish
-Select a post (3, 1, 4, 2): 1
+Select a post (1, 2, 3, 4): 1
 ```
 The available options are the folders inside the posts folder.
 
@@ -38,16 +38,16 @@ After ther user is logged in and select the facebook profile to publish the post
 ```
 
 ### Commands
-1. `publish`
+1. `publish`: Publish post a post
+    #### Options
+    ```shell
+    This is a required option, but if not provided, the CLI will prompt the user to enter the value.
+    The available values are the folders inside the posts folder where the posts are stored.
+    The post folder path is defined with the --posts-folder-path option.
+    --post The post [default: None] [required]
+    ```
 
-Publish posts
-#### Options
-```shell
-This is a required option, but if not provided, the CLI will prompt the user to enter the value.
-The available values are the folders inside the posts folder where the posts are stored.
-The post folder path is defined with the --posts-folder-path option.
---post The post [default: None] [required]
-```
+2. `login`: Login to Facebook manually. This command always open the browser so the user can login manually.
 
 ## Build
 ```shell
