@@ -1,4 +1,5 @@
 import csv
+from datetime import datetime
 from pathlib import Path
 from time import sleep
 from typing import Annotated, Optional
@@ -239,8 +240,9 @@ def publish(
     with open(groups_file_path, "r") as groups_file:
         reader = csv.reader(groups_file, delimiter=";")
         rows = list(reader)
+        num_groups = len(rows)
 
-        print_panel(f"This post is going to be publish in {len(rows)} groups")
+        print_panel(f"This post is going to be publish in {num_groups} groups")
 
         # Copy the description to the clipboard
         pyperclip.copy(description.strip())
@@ -342,6 +344,16 @@ def publish(
         print_panel("Groups with errors", "warning")
         for group in groups_with_errors:
             print_panel(f"Group: {group[0]} - URL: {group[1]} - {group[2]}", "warning")
+
+    # Write to a file log
+    # publication timestamp groups without_errors with_errors
+    with_errors = len(groups_with_errors)
+    without_errors = num_groups - with_errors
+    line = [post, datetime.now(), num_groups, without_errors, with_errors]
+    
+    with open(post_path / "log.csv", "a") as log_file:
+        writer = csv.writer(log_file, delimiter=";")
+        writer.writerow(line)
 
     input("Press ENTER to finish the process...")
 
