@@ -244,6 +244,9 @@ def publish(
 
         print_panel(f"This post is going to be publish in {num_groups} groups")
 
+        # Copy the description to the clipboard
+        pyperclip.copy(description.strip())
+
         for row in rows:
             try:
                 group_name = row[0]
@@ -265,7 +268,7 @@ def publish(
                         write_something_el = find_element(
                             driver,
                             By.XPATH,
-                            "//span[contains(text(), 'Write something')]")
+                            "//span[text()='Write something...']")
                         write_something_el.click()
                     except NoSuchElementException:
                         navigate(driver, group_url)
@@ -275,31 +278,20 @@ def publish(
                             start_discussion_el = find_element(
                                 driver,
                                 By.XPATH,
-                                "//span[contains(text(), 'Start discussion')]")
+                                "//span[text()='Start discussion']")
                             start_discussion_el.click()
                         except NoSuchElementException:
                             write_something_el = find_element(
                                 driver,
                                 By.XPATH,
-                                "//span[contains(text(), 'Write something')]")
+                                "//span[text()='Write something...']")
                             write_something_el.click()
 
                     sleep(3)
 
-                    try:
-                        textarea = find_element(
-                            driver, By.XPATH,
-                            "//div[contains(@aria-label, 'Create a public post')]")
-                    except NoSuchElementException:
-                        textarea = find_element(
-                            driver, By.XPATH,
-                            "//div[contains(@aria-label, 'Write something')]")
-
-                    # Copy the description to the clipboard
-                    pyperclip.copy(description.strip())
-                    sleep(1)
-
                     # Paste the description
+                    textarea = driver.switch_to.active_element
+                    sleep(1)
                     textarea.send_keys(Keys.CONTROL + "v")
                     sleep(2)
 
