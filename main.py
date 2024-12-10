@@ -160,8 +160,11 @@ def publish(
         ]
 ):
     """
-    Publish posts
+    Publish posts (This command ignore headless option)
     """
+    # Force no headless mode
+    ctx.obj["headless"] = False
+
     post_path = Path(posts_folder_path_) / post
     post_images_path = post_path / "images"
 
@@ -216,7 +219,7 @@ def publish(
     # Text
     description: str
     with open(description_file_path, "r") as description_file:
-        description = description_file.read()
+        description = description_file.read().strip()
 
     print_panel(description)
 
@@ -243,9 +246,6 @@ def publish(
         num_groups = len(rows)
 
         print_panel(f"This post is going to be publish in {num_groups} groups")
-
-        # Copy the description to the clipboard
-        pyperclip.copy(description.strip())
 
         for row in rows:
             try:
@@ -289,9 +289,13 @@ def publish(
 
                     sleep(3)
 
-                    # Paste the description
                     textarea = driver.switch_to.active_element
                     sleep(1)
+
+                    # Copy the description to the clipboard
+                    pyperclip.copy(description)
+
+                    # Paste the description
                     textarea.send_keys(Keys.CONTROL + "v")
                     sleep(2)
 

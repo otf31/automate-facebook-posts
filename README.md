@@ -21,7 +21,7 @@ Select a post (1, 2, 3, 4): 1
 ```
 The available options are the folders inside the posts folder.
 
-This command also will check whether the user is logged in or not. If there is not a 
+This command also will check whether the user is logged in or not. If there is not a
 valid Facebook session, then that login process must be done manually.
 
 After ther user is logged in and select the facebook profile to publish the posts, the user needs to press `ENTER` in the console to start the publication process.
@@ -38,8 +38,8 @@ After ther user is logged in and select the facebook profile to publish the post
 ```
 
 ### Commands
-1. `publish`: Publish post a post
-    #### Options
+1. `publish`: Publish post a post. This command always is executed in heaful mode.
+   #### Options
     ```shell
     This is a required option, but if not provided, the CLI will prompt the user to enter the value.
     The available values are the folders inside the posts folder where the posts are stored.
@@ -47,7 +47,7 @@ After ther user is logged in and select the facebook profile to publish the post
     --post The post [default: None] [required]
     ```
 
-2. `login`: Login to Facebook manually. This command always open the browser so the user can login manually.
+2. `login`: Login to Facebook manually. This command always is executed in headful mode.
 
 ## Build
 ```shell
