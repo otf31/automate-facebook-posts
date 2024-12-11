@@ -165,7 +165,8 @@ def publish(
     # Force no headless mode
     ctx.obj["headless"] = False
 
-    post_path = Path(posts_folder_path_) / post
+    posts_folder_path = ctx.obj["posts_folder_path"]
+    post_path = Path(posts_folder_path) / post
     post_images_path = post_path / "images"
 
     # Check whether the images folder exists
@@ -355,7 +356,7 @@ def publish(
     without_errors = num_groups - with_errors
     line = [post, datetime.now(), num_groups, without_errors, with_errors]
     
-    with open(post_path / "log.csv", "a") as log_file:
+    with open(posts_folder_path / "log.csv", "a") as log_file:
         writer = csv.writer(log_file, delimiter=";")
         writer.writerow(line)
 
@@ -423,7 +424,8 @@ def callback(
             "chrome_driver_path": chrome_driver_path,
             "headless": headless,
             "chrome_config_path": chrome_config_path,
-            "chrome_profile": chrome_profile
+            "chrome_profile": chrome_profile,
+            "posts_folder_path": posts_folder_path
         }
 
     pass
