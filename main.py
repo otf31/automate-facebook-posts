@@ -9,6 +9,7 @@ import pyperclip
 import typer
 from rich import print
 from rich.panel import Panel
+from rich.progress import track
 from selenium.common import WebDriverException, NoSuchElementException, \
     ElementClickInterceptedException, NoSuchWindowException
 from selenium.webdriver.chrome import webdriver
@@ -165,8 +166,8 @@ def publish(
     # Force no headless mode
     ctx.obj["headless"] = False
 
-    posts_folder_path = ctx.obj["posts_folder_path"]
-    post_path = Path(posts_folder_path) / post
+    posts_folder_path = Path(ctx.obj["posts_folder_path"])
+    post_path = posts_folder_path / post
     post_images_path = post_path / "images"
 
     # Check whether the images folder exists
@@ -248,12 +249,12 @@ def publish(
 
         print_panel(f"This post is going to be publish in {num_groups} groups")
 
-        for row in rows:
+        for row in track(rows, "Publishing..."):
             try:
                 group_name = row[0]
                 group_url = row[1]
 
-                print_panel(f"Group: {group_name} - URL: {group_url}")
+                print_panel(f"{group_name} - {group_url}")
 
                 # Navigate to the group with subpath /buy_sell_discussion
                 navigate(driver, group_url + "buy_sell_discussion")
@@ -355,7 +356,7 @@ def publish(
     with_errors = len(groups_with_errors)
     without_errors = num_groups - with_errors
     line = [post, datetime.now(), num_groups, without_errors, with_errors]
-    
+
     with open(posts_folder_path / "log.csv", "a") as log_file:
         writer = csv.writer(log_file, delimiter=";")
         writer.writerow(line)
