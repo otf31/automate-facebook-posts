@@ -1,6 +1,7 @@
 import csv
 from datetime import datetime
 from pathlib import Path
+from random import random
 from time import sleep
 from typing import Annotated, Optional
 
@@ -78,7 +79,6 @@ def init_driver(
 
 
 def is_logged_in(driver: webdriver.WebDriver):
-    sleep(1)
     navigate(driver, facebook_url + "/groups/feed/")
 
     return "Groups | Facebook" in driver.title
@@ -256,8 +256,8 @@ def publish(
 
                 print_panel(f"{group_name} - {group_url}")
 
-                # Navigate to the group with subpath /buy_sell_discussion
-                navigate(driver, group_url + "buy_sell_discussion")
+                # Navigate to the group
+                navigate(driver, group_url)
 
                 if driver.title == "Facebook":
                     print_panel(f"Group {group_name} does not exist or is not available",
@@ -265,30 +265,26 @@ def publish(
                     continue
 
                 try:
+                    # Go to Discussion tab
+                    discussion_tab = find_element(
+                        driver,
+                        By.CSS_SELECTOR,
+                        "a[href*='buy_sell_discussion']")
+                    discussion_tab.click()
+
                     try:
-                        # Find the Write something element
-                        write_something_el = find_element(
+                        write_something = find_element(
                             driver,
                             By.XPATH,
-                            "//span[text()='Write something...']")
-                        write_something_el.click()
+                            "//span[contains(text(), 'Write something')]")
+                        write_something.click()
                     except NoSuchElementException:
-                        navigate(driver, group_url)
-
-                        try:
-                            # Otherwise find the Start Discussion element
-                            start_discussion_el = find_element(
-                                driver,
-                                By.XPATH,
-                                "//span[text()='Start discussion']")
-                            start_discussion_el.click()
-                        except NoSuchElementException:
-                            write_something_el = find_element(
-                                driver,
-                                By.XPATH,
-                                "//span[text()='Write something...']")
-                            write_something_el.click()
-
+                        # Otherwise find the Start Discussion element
+                        start_discussion = find_element(
+                            driver,
+                            By.XPATH,
+                            "//span[contains(text(), 'Start discussion')]")
+                        start_discussion.click()
                     sleep(3)
 
                     textarea = driver.switch_to.active_element
@@ -318,8 +314,9 @@ def publish(
 
                     # Upload the images
                     files = "\n".join([image.absolute().as_posix() for image in images])
+                    sleep(1)
                     file_input.send_keys(files)
-                    sleep(3)
+                    sleep(2)
 
                     # Press the Post button
                     post_button = find_element(
@@ -329,7 +326,7 @@ def publish(
 
                     post_button.click()
                     print_panel(f"The post has been submitted to the group {group_name}")
-                    sleep(15)
+                    sleep((random() + 3) * 4)
                 except NoSuchElementException as e:
                     groups_with_errors.append((group_name, group_url, e.msg))
                     continue
