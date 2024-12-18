@@ -1,7 +1,6 @@
 import csv
 from datetime import datetime
 from pathlib import Path
-from random import random
 from time import sleep
 from typing import Annotated, Optional
 
@@ -16,6 +15,8 @@ from selenium.common import WebDriverException, NoSuchElementException, \
 from selenium.webdriver.chrome import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
+from selenium.webdriver.support import expected_conditions as EC
+from selenium.webdriver.support.wait import WebDriverWait
 
 app = typer.Typer(no_args_is_help=True)
 
@@ -46,7 +47,8 @@ def init_driver(
         chrome_options.binary_location = chrome_binary_path
         chrome_options.add_argument("--remote-debugging-port=3322")
         chrome_options.add_argument("--disable-extensions")
-        # chrome_options.add_experimental_option("detach", True)
+        chrome_options.add_experimental_option("detach", True)
+
         if headless:
             chrome_options.add_argument("--headless")
 
@@ -70,12 +72,16 @@ def init_driver(
         # Create the driver
         driver = webdriver.WebDriver(options=chrome_options, service=service)
 
+        # Set the implicit wait
+        driver.implicitly_wait(5)
+
         return driver
     except WebDriverException as e:
         print_panel(
             "[red]Error[/red]: %s" % e.msg,
             "error"
         )
+        exit_app()
 
 
 def is_logged_in(driver: webdriver.WebDriver):
@@ -86,7 +92,6 @@ def is_logged_in(driver: webdriver.WebDriver):
 
 def find_element(driver: webdriver.WebDriver, by: By, value: str):
     element = driver.find_element(by, value)
-    sleep(1)
 
     return element
 
@@ -99,8 +104,7 @@ def navigate(driver: webdriver.WebDriver, url: str):
         print_panel(f"Error: {e.msg}", "error")
 
 
-def exit_app(driver):
-    driver.quit()
+def exit_app():
     raise typer.Exit()
 
 
@@ -123,6 +127,21 @@ def print_panel(
         raise typer.Exit()
 
 
+def validate_path(path: Path, path_type: str):
+    if not path.exists():
+        print_panel(f"Path {path} does not exist", "error")
+    elif path_type == "file":
+        if not path.is_file():
+            print_panel(f"{path} is not a file", "error")
+        elif path.stat().st_size == 0:
+            print_panel(f"File {path} is empty", "error")
+    elif path_type == "dir":
+        if not path.is_dir():
+            print_panel(f"{path} is not a directory", "error")
+        elif not list(path.iterdir()):
+            print_panel(f"Directory {path} is empty", "error")
+
+
 @app.command()
 def login(
         ctx: typer.Context
@@ -139,12 +158,12 @@ def login(
     print_panel("Checking if the user is logged in...")
     if is_logged_in(driver):
         print_panel("You are already logged in", "warning")
-        exit_app(driver)
+        exit_app()
 
     input("Please login manually into your Facebook account, once you are logged in "
           "press ENTER...")
 
-    exit_app(driver)
+    exit_app()
 
 
 @app.command()
@@ -170,46 +189,18 @@ def publish(
     post_path = posts_folder_path / post
     post_images_path = post_path / "images"
 
-    # Check whether the images folder exists
-    if not post_images_path.exists():
-        print_panel(f"Images folder {post_images_path} does not exist", "error")
-    else:
-        # Check whether the images folder is a directory
-        if not post_images_path.is_dir():
-            print_panel(f"{post_images_path} is not a folder, it must be a directory",
-                        "error")
-        else:
-            # Check whether the images folder is empty
-            if not list(post_images_path.iterdir()):
-                print_panel(f"Images folder {post_images_path} is empty", "error")
+    # Validate images folder
+    validate_path(post_images_path, "dir")
 
-    # Check wheter the groups file exists (groups.csv)
     groups_file_path = post_path / "groups.csv"
 
-    if not groups_file_path.exists():
-        print_panel(f"Groups file {groups_file_path} does not exist", "error")
-    else:
-        # Check whether is a file
-        if not groups_file_path.is_file():
-            print_panel(f"{groups_file_path} is not a file", "error")
-        else:
-            # Check whether the groups file is empty
-            if groups_file_path.stat().st_size == 0:
-                print_panel(f"Groups file {groups_file_path} is empty", "error")
+    # Validate groups file
+    validate_path(groups_file_path, "file")
 
-    # Check whether the description file exists (description.txt)
     description_file_path = post_path / "description.txt"
 
-    if not description_file_path.exists():
-        print_panel(f"Description file {description_file_path} does not exist", "error")
-    else:
-        # Check whether is a file
-        if not description_file_path.is_file():
-            print_panel(f"{description_file_path} is not a file", "error")
-        else:
-            # Check whether the description file is empty
-            if description_file_path.stat().st_size == 0:
-                print_panel(f"Description file {description_file_path} is empty", "error")
+    # Validate description file
+    validate_path(description_file_path, "file")
 
     images_exts = [".jpg", ".jpeg", ".png"]
 
@@ -259,19 +250,12 @@ def publish(
                 # Navigate to the group
                 navigate(driver, group_url)
 
-                if driver.title == "Facebook":
+                if "| Facebook" not in driver.title:
                     print_panel(f"Group {group_name} does not exist or is not available",
                                 "warning")
                     continue
 
                 try:
-                    # Go to Discussion tab
-                    discussion_tab = find_element(
-                        driver,
-                        By.CSS_SELECTOR,
-                        "a[href*='buy_sell_discussion']")
-                    discussion_tab.click()
-
                     try:
                         write_something = find_element(
                             driver,
@@ -279,19 +263,40 @@ def publish(
                             "//span[contains(text(), 'Write something')]")
                         write_something.click()
                     except NoSuchElementException:
-                        # Otherwise find the Start Discussion element
-                        start_discussion = find_element(
-                            driver,
-                            By.XPATH,
-                            "//span[contains(text(), 'Start discussion')]")
-                        start_discussion.click()
-                    sleep(3)
+                        try:
+                            start_discussion = find_element(
+                                driver,
+                                By.XPATH,
+                                "//span[contains(text(), 'Start discussion')]")
+                            start_discussion.click()
+                        except NoSuchElementException:
+                            # Go to Discussion tab
+                            discussion_tab = find_element(
+                                driver,
+                                By.CSS_SELECTOR,
+                                "a[href*='buy_sell_discussion']")
+                            discussion_tab.click()
 
+                            try:
+                                write_something = find_element(
+                                    driver,
+                                    By.XPATH,
+                                    "//span[contains(text(), 'Write something')]")
+                                write_something.click()
+                            except NoSuchElementException:
+                                # Otherwise find the Start Discussion element
+                                start_discussion = find_element(
+                                    driver,
+                                    By.XPATH,
+                                    "//span[contains(text(), 'Start discussion')]")
+                                start_discussion.click()
+
+                    sleep(2)
                     textarea = driver.switch_to.active_element
-                    sleep(1)
 
                     # Copy the description to the clipboard
                     pyperclip.copy(description)
+                    sleep(1)
 
                     # Paste the description
                     textarea.send_keys(Keys.CONTROL + "v")
@@ -323,10 +328,21 @@ def publish(
                         driver,
                         By.XPATH,
                         "//span[text()='Post']")
-
                     post_button.click()
+
                     print_panel(f"The post has been submitted to the group {group_name}")
-                    sleep((random() + 3) * 4)
+
+                    posting_el = find_element(
+                        driver,
+                        By.XPATH,
+                        "//span[contains(text(), 'Posting')]")
+
+                    # Explicit wait until the posting text is not displayed
+                    wait = WebDriverWait(driver, 15)
+                    wait.until(
+                        EC.invisibility_of_element_located(posting_el))
+
+                    sleep(2)
                 except NoSuchElementException as e:
                     groups_with_errors.append((group_name, group_url, e.msg))
                     continue
@@ -346,7 +362,7 @@ def publish(
     if groups_with_errors:
         print_panel("Groups with errors", "warning")
         for group in groups_with_errors:
-            print_panel(f"Group: {group[0]} - URL: {group[1]} - {group[2]}", "warning")
+            print_panel(f"{group[0]} - {group[1]} - {group[2]}", "warning")
 
     # Write to a file log
     # publication timestamp groups without_errors with_errors
@@ -358,7 +374,7 @@ def publish(
         writer = csv.writer(log_file, delimiter=";")
         writer.writerow(line)
 
-    input("Press ENTER to finish the process...")
+    exit_app()
 
 
 @app.callback()

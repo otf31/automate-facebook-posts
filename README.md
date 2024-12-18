@@ -57,3 +57,4 @@ python -m nuitka --onefile main.py --output-filename=autofbpost
 ## Resources
 - https://docs.python.org/3/library/pathlib.html#corresponding-tools
 - https://rich.readthedocs.io/en/latest/panel.html
+- Wait an element to disappear: https://stackoverflow.com/questions/73414090/how-to-wait-for-multiple-loading-element-to-disappear-using-selenium
