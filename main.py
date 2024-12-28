@@ -15,7 +15,7 @@ from selenium.common import WebDriverException, NoSuchElementException, \
 from selenium.webdriver.chrome import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
-from selenium.webdriver.support import expected_conditions as EC
+from selenium.webdriver.support import expected_conditions as ec
 from selenium.webdriver.support.wait import WebDriverWait
 
 app = typer.Typer(no_args_is_help=True)
@@ -84,6 +84,7 @@ def init_driver(
         exit_app()
 
 
+# TODO: try-except
 def is_logged_in(driver: webdriver.WebDriver):
     navigate(driver, facebook_url + "/groups/feed/")
 
@@ -247,15 +248,16 @@ def publish(
 
                 print_panel(f"{group_name} - {group_url}")
 
-                # Navigate to the group
-                navigate(driver, group_url)
-
-                if "| Facebook" not in driver.title:
-                    print_panel(f"Group {group_name} does not exist or is not available",
-                                "warning")
-                    continue
-
                 try:
+                    # Navigate to the group
+                    navigate(driver, group_url)
+
+                    if "| Facebook" not in driver.title:
+                        print_panel(
+                            f"Group {group_name} does not exist or is not available",
+                            "warning")
+                        continue
+
                     try:
                         write_something = find_element(
                             driver,
@@ -339,10 +341,11 @@ def publish(
 
                     # Explicit wait until the posting text is not displayed
                     wait = WebDriverWait(driver, 15)
+                    sleep(1)
                     wait.until(
-                        EC.invisibility_of_element_located(posting_el))
+                        ec.invisibility_of_element_located(posting_el))
 
-                    sleep(2)
+                    sleep(1)
                 except NoSuchElementException as e:
                     groups_with_errors.append((group_name, group_url, e.msg))
                     continue
@@ -352,6 +355,10 @@ def publish(
                 # This is a general exception
                 except WebDriverException as e:
                     groups_with_errors.append((group_name, group_url, e.msg))
+                    continue
+                # Catch any exception
+                except Exception as e:
+                    groups_with_errors.append((group_name, group_url, str(e)))
                     continue
             except IndexError as e:
                 print_panel(f"{e}", "warning")
