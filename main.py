@@ -189,19 +189,21 @@ def publish(
     posts_folder_path = Path(ctx.obj["posts_folder_path"])
     post_path = posts_folder_path / post
     post_images_path = post_path / "images"
+    filters_path = post_path / "filters.txt"
+    groups_file_path = posts_folder_path / "groups.csv"
+    description_file_path = post_path / "description.txt"
 
     # Validate images folder
     validate_path(post_images_path, "dir")
 
-    groups_file_path = post_path / "groups.csv"
-
     # Validate groups file
     validate_path(groups_file_path, "file")
 
-    description_file_path = post_path / "description.txt"
-
     # Validate description file
     validate_path(description_file_path, "file")
+
+    # Validate filters file
+    validate_path(filters_path, "file")
 
     images_exts = [".jpg", ".jpeg", ".png"]
 
@@ -210,15 +212,22 @@ def publish(
               image.suffix in images_exts]
     print_panel(f"Found {len(images)} images")
 
-    # Text
+    # Description
     description: str
     with open(description_file_path, "r") as description_file:
         description = description_file.read().strip()
 
     print_panel(description)
 
+    # Filters
+    publication_filters: list[str]
+    with open(filters_path, "r") as filters_file:
+        text = filters_file.read()
+        publication_filters = [f.strip().lower() for f in text.split(",")]
+
+    print_panel(f"Filters: {publication_filters}")
+
     driver = init_driver(ctx)
-    sleep(3)
 
     print_panel("Checking if the user is logged in...")
     if not is_logged_in(driver):
@@ -237,14 +246,22 @@ def publish(
     with open(groups_file_path, "r") as groups_file:
         reader = csv.reader(groups_file, delimiter=";")
         rows = list(reader)
-        num_groups = len(rows)
+        groups = []
+
+        for row in rows:
+            group_filters = [gf.strip().lower() for gf in row[2].split(",")]
+
+            if any(gf in publication_filters for gf in group_filters):
+                groups.append(row)
+
+        num_groups = len(groups)
 
         print_panel(f"This post is going to be publish in {num_groups} groups")
 
-        for row in track(rows, "Publishing..."):
+        for group in track(groups, "Publishing..."):
             try:
-                group_name = row[0]
-                group_url = row[1]
+                group_name = group[0]
+                group_url = group[1]
 
                 print_panel(f"{group_name} - {group_url}")
 
@@ -320,7 +337,7 @@ def publish(
                         'video/x-m4v,video/x-matroska,.mkv"]')
 
                     # Upload the images
-                    files = "\n".join([image.absolute().as_posix() for image in images])
+                    files = "\n".join([i.absolute().as_posix() for i in images])
                     sleep(1)
                     file_input.send_keys(files)
                     sleep(2)
@@ -332,7 +349,7 @@ def publish(
                         "//span[text()='Post']")
                     post_button.click()
 
-                    print_panel(f"The post has been submitted to the group {group_name}")
+                    print_panel(f"The post has been submitted to {group_name}")
 
                     posting_el = find_element(
                         driver,
