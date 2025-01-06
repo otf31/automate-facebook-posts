@@ -251,7 +251,7 @@ def publish(
         for row in rows:
             group_filters = [gf.strip().lower() for gf in row[2].split(",")]
 
-            if any(gf in publication_filters for gf in group_filters):
+            if len(set(publication_filters).intersection(set(group_filters))) > 0:
                 groups.append(row)
 
         num_groups = len(groups)
