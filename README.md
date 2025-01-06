@@ -12,6 +12,62 @@ The aim of this project is to automate the process of posting on Facebook groups
 The CLI app comes with the following features:
 - Post on Facebook groups
 
+## Folders structure and files
+### Folder structure
+```shell
+.
+├── 1
+│   ├── description.txt -> The description of the post
+│   ├── filters.txt
+│   └── images
+│       ├── image1.jpeg
+│       ├── image2.jpeg
+│       ├── image3.jpeg
+│       └── image4.jpeg
+├── 2
+│   ├── description.txt
+│   ├── filters.txt
+│   └── images
+│       ├── image1.jpeg
+│       └── image2.jpeg
+├── groups.csv
+└── log.csv
+```
+
+## Groups file
+The groups file is a CSV file that contains the groups where the posts will be published.
+The file must have the following columns:
+- `group_name`: The name of the group
+- `group_url`: The URL of the group
+- `group_filters`: The filters to apply to the group (where to publish). The filters 
+  are separated by commas. The content of this column will be compared with the 
+  content of the `filters.txt` file in the post folder. If there is a match, then 
+  the group will be selected to publish the post.
+
+Example:
+
+File: `groups.csv`
+```csv
+Group 1;https://www.facebook.com/groups/group1;filter1, filter2
+```
+
+File: `1/filters.txt`
+```txt
+filter2, filter4
+```
+
+In this case, the group `Group 1` will be selected to publish the post because the 
+filters `filter2` is present in the `filters.txt` file.
+
+## Log file
+The log file is a CSV file that contains the information about the posts that have been published.
+The file must have the following columns:
+- `post`: The name of the folder where the post is stored
+- `timestamp`: The timestamp when the post was published
+- `groups_number`: The total number of groups
+- `groups_submitted`: The groups where the post was submitted
+- `groups_failed`: The groups where the post was not submitted
+
 ## Usage
 
 ### Publish posts
