@@ -1,12 +1,11 @@
 # Auto Facebook Post
-AutoFbPost is a CLI tool the helps you to post on Facebook automatically.
+autofbpost is a CLI tool that helps you to post on Facebook automatically.
 The aim of this project is to automate the process of posting on Facebook groups.
 
 ## Tech stack
 - Python 3
-- Selenium
+- Playwright
 - Typer
-- Pyperclip
 
 ## Features
 The CLI app comes with the following features:
@@ -14,35 +13,43 @@ The CLI app comes with the following features:
 
 ## Folders structure and files
 ### Folder structure
+Before using the app, the user needs to create this folder structure to store the posts and the groups where the posts will be published.
+
+The path to the posts folder is defined with the `--posts-folder-path` option and is required to run the app.
+
 ```shell
-.
-├── 1
-│   ├── description.txt -> The description of the post
-│   ├── filters.txt
-│   └── images
-│       ├── image1.jpeg
-│       ├── image2.jpeg
-│       ├── image3.jpeg
-│       └── image4.jpeg
-├── 2
-│   ├── description.txt
-│   ├── filters.txt
-│   └── images
-│       ├── image1.jpeg
-│       └── image2.jpeg
-├── groups.csv
-└── log.csv
+📁 .
+├── 📁 1
+│   ├── 📄 description.txt -> The description of the post
+│   ├── 📄 filters.txt
+│   └── 📁 images
+│       ├── 🖼 image1.jpeg
+│       ├── 🖼 image2.jpeg
+│       ├── 🖼 image3.jpeg
+│       └── 🖼 image4.jpeg
+├── 📁 2
+│   ├── 📄 description.txt
+│   ├── 📄 filters.txt
+│   └── 📁 images
+│       ├── 🖼 image1.jpeg
+│       └── 🖼 image2.jpeg
+├── 📄 log.csv
+├── 📄 groups.csv
+└── 📁 profile -> Where the chrome profile is stored, created by the app
 ```
 
-## Groups file
+The app creates a **_profile_** folder in this directory to store chrome data so the 
+user does not need to login every time.
+Because of this, a post folder with a name **_profile_** is not allowed
+
+## Groups file (groups.csv)
 The groups file is a CSV file that contains the groups where the posts will be published.
 The file must have the following columns:
 - `group_name`: The name of the group
 - `group_url`: The URL of the group
-- `group_filters`: The filters to apply to the group (where to publish). The filters 
-  are separated by commas. The content of this column will be compared with the 
-  content of the `filters.txt` file in the post folder. If there is a match, then 
-  the group will be selected to publish the post.
+- `group_filters`: The filters to apply to the group (where to publish). The filters are separated by commas. The content of this column will be compared with the content of the `filters.txt` file in the post folder. If there is a match, then the group will be selected to publish the post.
+
+⚠ The user must be member a group to be able to post on it.
 
 Example:
 
@@ -59,7 +66,7 @@ filter2, filter4
 In this case, the group `Group 1` will be selected to publish the post because the 
 filters `filter2` is present in the `filters.txt` file.
 
-## Log file
+## Log file (log.csv)
 The log file is a CSV file that contains the information about the posts that have been published.
 The file must have the following columns:
 - `post`: The name of the folder where the post is stored
@@ -77,24 +84,18 @@ Select a post (1, 2, 3, 4): 1
 ```
 The available options are the folders inside the posts folder.
 
-This command also will check whether the user is logged in or not. If there is not a
-valid Facebook session, then that login process must be done manually.
-
-After ther user is logged in and select the facebook profile to publish the posts, the user needs to press `ENTER` in the console to start the publication process.
+This command also will check whether the user is logged in or not. If there is not a valid Facebook session, then login process must be done manually using the `login` command.
 
 ## CLI arguments, options and commands
 ### Options
 ```shell
 --chrome-binary-path TEXT The Chrome binary path
---chrome-driver-path TEXT The Chrome driver path
---chrome-config-path TEXT The Chrome config path
---chrome-profile TEXT The Chrome profile
 --headless --no-headless Run the browser in headless mode [default: no-headless]
 --posts-folder-path TEXT The folder containing the posts
 ```
 
 ### Commands
-1. `publish`: Publish post a post. This command always is executed in heaful mode.
+1. `publish`: Publish a post into groups. This command always is executed in heaful mode.
    #### Options
     ```shell
     This is a required option, but if not provided, the CLI will prompt the user to enter the value.
@@ -107,7 +108,7 @@ After ther user is logged in and select the facebook profile to publish the post
 
 ## Build
 ```shell
-python -m nuitka --onefile main.py --output-filename=autofbpost
+python -m nuitka --onefile main.py --playwright-include-browser=none --output-filename=autofbpost
 ```
 
 ## Resources
