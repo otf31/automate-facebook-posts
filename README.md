@@ -13,23 +13,32 @@ The CLI app comes with the following features:
 
 ## Folders structure and files
 ### Folder structure
-Before using the app, the user needs to create this folder structure to store the posts and the groups where the posts will be published.
+Before using the app, the user needs to create this folder structure to store the 
+posts and the groups where the posts will be published.
 
-The path to the posts folder is defined with the `--posts-folder-path` option and is required to run the app.
+The path to the posts folder is defined with the `--posts-folder-path` option and is 
+required to run the app.
 
 ```shell
 📁 .
 ├── 📁 1
-│   ├── 📄 description.txt -> The description of the post
 │   ├── 📄 filters.txt
+│   ├── 📁 descriptions -> At least three descriptions
+│   │   ├── 📄 description1.txt
+│   │   ├── 📄 description2.txt
+│   │   └── 📄 description3.txt
 │   └── 📁 images
 │       ├── 🖼 image1.jpeg
 │       ├── 🖼 image2.jpeg
 │       ├── 🖼 image3.jpeg
 │       └── 🖼 image4.jpeg
 ├── 📁 2
-│   ├── 📄 description.txt
 │   ├── 📄 filters.txt
+│   ├── 📁 descriptions
+│   │   ├── 📄 description1.txt
+│   │   ├── 📄 description2.txt
+│   │   ├── 📄 description3.txt
+│   │   └── 📄 description4.txt
 │   └── 📁 images
 │       ├── 🖼 image1.jpeg
 │       └── 🖼 image2.jpeg
@@ -38,16 +47,25 @@ The path to the posts folder is defined with the `--posts-folder-path` option an
 └── 📁 profile -> Where the chrome profile is stored, created by the app
 ```
 
-The app creates a **_profile_** folder in this directory to store chrome data so the 
+The app creates a **_profile_** folder in this directory to store chrome data so the
 user does not need to login every time.
 Because of this, a post folder with a name **_profile_** is not allowed
 
-## Groups file (groups.csv)
+### Descriptions folder
+This folder contains a descriptions .txt files for a post. They must be different from 
+each other (slightly or entirely) to bypass facebook automate software detection. The
+application will pick a random description for every post. The minimun number of
+description files is three.
+
+### Groups file (groups.csv)
 The groups file is a CSV file that contains the groups where the posts will be published.
 The file must have the following columns:
 - `group_name`: The name of the group
 - `group_url`: The URL of the group
-- `group_filters`: The filters to apply to the group (where to publish). The filters are separated by commas. The content of this column will be compared with the content of the `filters.txt` file in the post folder. If there is a match, then the group will be selected to publish the post.
+- `group_filters`: The filters to apply to the group (where to publish). The filters 
+  are separated by commas. The content of this column will be compared with the 
+  content of the `filters.txt` file in the post folder. If there is a match, then the 
+  group will be selected to publish the post.
 
 ⚠ The user must be member a group to be able to post on it.
 
@@ -63,11 +81,12 @@ File: `1/filters.txt`
 filter2, filter4
 ```
 
-In this case, the group `Group 1` will be selected to publish the post because the 
+In this case, the group `Group 1` will be selected to publish the post because the
 filters `filter2` is present in the `filters.txt` file.
 
-## Log file (log.csv)
-The log file is a CSV file that contains the information about the posts that have been published.
+### Log file (log.csv)
+The log file is a CSV file that contains the information about the posts that have 
+been published.
 The file must have the following columns:
 - `post`: The name of the folder where the post is stored
 - `timestamp`: The timestamp when the post was published
@@ -84,22 +103,26 @@ Select a post (1, 2, 3, 4): 1
 ```
 The available options are the folders inside the posts folder.
 
-This command also will check whether the user is logged in or not. If there is not a valid Facebook session, then login process must be done manually using the `login` command.
+This command also will check whether the user is logged in or not. If there is not a
+valid Facebook session, then login process must be done manually using the `login` command.
 
 ## CLI arguments, options and commands
 ### Options
 ```shell
 --chrome-binary-path TEXT The Chrome binary path
---headless --no-headless Run the browser in headless mode [default: no-headless]
+--headless --no-headless Run the browser in headless mode [default: headless]
 --posts-folder-path TEXT The folder containing the posts
 ```
 
 ### Commands
-1. `publish`: Publish a post into groups. This command always is executed in heaful mode.
-   #### Options
+1. `publish`: Publish a post into groups.
+
+    #### Options
     ```shell
-    This is a required option, but if not provided, the CLI will prompt the user to enter the value.
-    The available values are the folders inside the posts folder where the posts are stored.
+    This is a required option, but if not provided, the CLI will prompt the user to 
+    enter the value.
+    The available values are the folders inside the posts folder where the posts are 
+    stored.
     The post folder path is defined with the --posts-folder-path option.
     --post The post [default: None] [required]
     ```
@@ -108,10 +131,17 @@ This command also will check whether the user is logged in or not. If there is n
 
 ## Build
 ```shell
-python -m nuitka --onefile main.py --playwright-include-browser=none --output-filename=autofbpost
+python -m nuitka --onefile main.py --include-module=login 
+--include-module=common_functions  --include-module=constants 
+--playwright-include-browser=none --output-filename=autofbpost
 ```
 
 ## Resources
 - https://docs.python.org/3/library/pathlib.html#corresponding-tools
 - https://rich.readthedocs.io/en/latest/panel.html
 - Wait an element to disappear: https://stackoverflow.com/questions/73414090/how-to-wait-for-multiple-loading-element-to-disappear-using-selenium
+- Playwright assertions: https://playwright.dev/python/docs/actionability#assertions
+- Rich status: https://brianlinkletter.com/2021/03/using-python-rich-library-status-module/
+- Match one **or** more elements with Playwright: https://playwright.dev/python/docs/locators#matching-one-of-the-two-alternative-locators
+- Bypass actionability checks: https://playwright.dev/python/docs/api/class-locator#locator-click-option-force
+- A single command in a separate file: https://typer.tiangolo.com/tutorial/one-file-per-command/?h=add_typer#main-module-mainpy
