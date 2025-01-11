@@ -1,170 +1,33 @@
 import csv
+import random
+import re
 from datetime import datetime
 from pathlib import Path
 from time import sleep
-from typing import Annotated, Optional
+from typing import Annotated, Optional, List
 
 import click
-import pyperclip
 import typer
-from rich import print
-from rich.panel import Panel
+from playwright.sync_api import sync_playwright, expect, Error
 from rich.progress import track
-from selenium.common import WebDriverException, NoSuchElementException, \
-    ElementClickInterceptedException, NoSuchWindowException
-from selenium.webdriver.chrome import webdriver
-from selenium.webdriver.common.by import By
-from selenium.webdriver.common.keys import Keys
-from selenium.webdriver.support import expected_conditions as ec
-from selenium.webdriver.support.wait import WebDriverWait
 
-app = typer.Typer(no_args_is_help=True)
+import login
+from common_functions import print_panel, validate_path, is_logged_in, launch_browser, \
+    navigate, wait_random_seconds, exit_app
+from constants import CHROME_BINARY_PATH, POST_FOLDER_PATH
 
-# Get HOME environment variable
-home = Path.home()
-facebook_url = "https://www.facebook.com"
-chrome_binary_path_ = "/opt/google/chrome/google-chrome"
-chrome_driver_path_ = "%s/Desktop/chromedriver/chromedriver-linux64/chromedriver" % home
-chrome_config_path_ = "%s/.config/google-chrome" % home
-chrome_profile_ = "Profile 3"
-posts_folder_path_ = "%s/Desktop/publication" % home
 available_posts = []
 
 
-def init_driver(
-        ctx: typer.Context
-):
-    print_panel("Initializing the driver...")
-    chrome_binary_path = ctx.obj["chrome_binary_path"]
-    chrome_driver_path = ctx.obj["chrome_driver_path"]
-    headless = ctx.obj["headless"]
-    chrome_config_path = ctx.obj["chrome_config_path"]
-    chrome_profile = ctx.obj["chrome_profile"]
+def pick_random_description(descriptions: List[Path]):
+    description = random.choice(descriptions)
 
-    try:
-        # Chrome options
-        chrome_options = webdriver.Options()
-        chrome_options.binary_location = chrome_binary_path
-        chrome_options.add_argument("--remote-debugging-port=3322")
-        chrome_options.add_argument("--disable-extensions")
-        chrome_options.add_experimental_option("detach", True)
-
-        if headless:
-            chrome_options.add_argument("--headless")
-
-        if not Path(chrome_driver_path).exists():
-            print_panel(f"Chrome driver path {chrome_driver_path} does not exist",
-                        "error")
-
-        if not Path(chrome_config_path).exists():
-            print_panel(f"Chrome config path {chrome_config_path} does not exist",
-                        "error")
-
-        if not (Path(chrome_config_path) / chrome_profile).exists():
-            print_panel(f"Chrome profile {chrome_profile} does not exist", "error")
-
-        chrome_options.add_argument(f"--user-data-dir={chrome_config_path}")
-        chrome_options.add_argument(f"--profile-directory={chrome_profile}")
-
-        # Chrome service
-        service = webdriver.Service(executable_path=chrome_driver_path)
-
-        # Create the driver
-        driver = webdriver.WebDriver(options=chrome_options, service=service)
-
-        # Set the implicit wait
-        driver.implicitly_wait(5)
-
-        return driver
-    except WebDriverException as e:
-        print_panel(
-            "[red]Error[/red]: %s" % e.msg,
-            "error"
-        )
-        exit_app()
+    with open(description, "r") as description_file:
+        return description_file.read().strip()
 
 
-# TODO: try-except
-def is_logged_in(driver: webdriver.WebDriver):
-    navigate(driver, facebook_url + "/groups/feed/")
-
-    return "Groups | Facebook" in driver.title
-
-
-def find_element(driver: webdriver.WebDriver, by: By, value: str):
-    element = driver.find_element(by, value)
-
-    return element
-
-
-def navigate(driver: webdriver.WebDriver, url: str):
-    try:
-        driver.get(url)
-        sleep(5)
-    except NoSuchWindowException as e:
-        print_panel(f"Error: {e.msg}", "error")
-
-
-def exit_app():
-    raise typer.Exit()
-
-
-def print_panel(
-        msg: str,
-        msg_type: str = "info"
-):
-    panel = Panel(msg, expand=False)
-
-    if msg_type == "error":
-        panel.style = "red"
-    elif msg_type == "warning":
-        panel.style = "yellow"
-    else:
-        panel.style = "green"
-
-    print(panel)
-
-    if msg_type == "error":
-        raise typer.Exit()
-
-
-def validate_path(path: Path, path_type: str):
-    if not path.exists():
-        print_panel(f"Path {path} does not exist", "error")
-    elif path_type == "file":
-        if not path.is_file():
-            print_panel(f"{path} is not a file", "error")
-        elif path.stat().st_size == 0:
-            print_panel(f"File {path} is empty", "error")
-    elif path_type == "dir":
-        if not path.is_dir():
-            print_panel(f"{path} is not a directory", "error")
-        elif not list(path.iterdir()):
-            print_panel(f"Directory {path} is empty", "error")
-
-
-@app.command()
-def login(
-        ctx: typer.Context
-):
-    """
-    Login into Facebook (this command ignore headless option)
-    """
-    # Force no headless mode
-    ctx.obj["headless"] = False
-
-    driver = init_driver(ctx)
-    sleep(3)
-
-    print_panel("Checking if the user is logged in...")
-    if is_logged_in(driver):
-        print_panel("You are already logged in", "warning")
-        exit_app()
-
-    input("Please login manually into your Facebook account, once you are logged in "
-          "press ENTER...")
-
-    exit_app()
+app = typer.Typer(no_args_is_help=True)
+app.add_typer(login.app)
 
 
 @app.command()
@@ -181,207 +44,247 @@ def publish(
         ]
 ):
     """
-    Publish posts (This command ignore headless option)
+    Publish posts.
     """
-    # Force no headless mode
-    ctx.obj["headless"] = False
-
     posts_folder_path = Path(ctx.obj["posts_folder_path"])
     post_path = posts_folder_path / post
-    post_images_path = post_path / "images"
+    images_folder_path = post_path / "images"
+    descriptions_folder_path = post_path / "descriptions"
+    filters_file_path = post_path / "filters.txt"
+    groups_file_path = posts_folder_path / "groups.csv"
 
     # Validate images folder
-    validate_path(post_images_path, "dir")
+    validate_path(images_folder_path, "dir")
 
-    groups_file_path = post_path / "groups.csv"
+    # Validate descriptions folder
+    validate_path(descriptions_folder_path, "dir", min_files=3)
 
     # Validate groups file
     validate_path(groups_file_path, "file")
 
-    description_file_path = post_path / "description.txt"
-
-    # Validate description file
-    validate_path(description_file_path, "file")
+    # Validate filters file
+    validate_path(filters_file_path, "file")
 
     images_exts = [".jpg", ".jpeg", ".png"]
 
     # Images
-    images = [image for image in post_images_path.iterdir() if
-              image.suffix in images_exts]
+    images = [
+        image for image in images_folder_path.iterdir() if
+        image.suffix in images_exts
+    ]
+
     print_panel(f"Found {len(images)} images")
 
-    # Text
-    description: str
-    with open(description_file_path, "r") as description_file:
-        description = description_file.read().strip()
+    # Descriptions
+    descriptions = [
+        description for description in descriptions_folder_path.iterdir() if
+        description.suffix == ".txt"
+    ]
 
-    print_panel(description)
+    # Print a random description
+    print_panel(pick_random_description(descriptions))
 
-    driver = init_driver(ctx)
-    sleep(3)
+    # Filters
+    publication_filters: list[str]
+    with open(filters_file_path, "r") as filters_file:
+        text = filters_file.read()
+        publication_filters = [f.strip().lower() for f in text.split(",")]
 
-    print_panel("Checking if the user is logged in...")
-    if not is_logged_in(driver):
-        print_panel(
-            "You are not logged in, please sign in manually into your Facebook account "
-            "using the [blue]login[/blue] command and be sure that you are with the "
-            "right profile",
-            "error")
+    print_panel(f"Filters: {publication_filters}")
 
-    # Press ENTER to continue
-    input("Press ENTER to continue the process...")
+    with sync_playwright() as p:
+        page = launch_browser(ctx, p)
 
-    groups_with_errors = []
+        print_panel("Checking if the user is logged in...")
+        if not is_logged_in(page):
+            print_panel(
+                "You are not logged in, [blue]please sign in manually into your Facebook "
+                "account[/blue] using the [blue]login[/blue] command and set your "
+                "Facebook profile if necessary, then try again",
+                "error"
+            )
 
-    # Read the groups file
-    with open(groups_file_path, "r") as groups_file:
-        reader = csv.reader(groups_file, delimiter=";")
-        rows = list(reader)
-        num_groups = len(rows)
+        # Press ENTER to continue
+        input("Press ENTER to continue the process...")
 
-        print_panel(f"This post is going to be publish in {num_groups} groups")
+        groups_with_errors = []
 
-        for row in track(rows, "Publishing..."):
-            try:
-                group_name = row[0]
-                group_url = row[1]
+        # Read the groups file
+        with open(groups_file_path, "r") as groups_file:
+            reader = csv.reader(groups_file, delimiter=";")
+            rows = list(reader)
+            groups = []
 
-                print_panel(f"{group_name} - {group_url}")
+            for row in rows:
+                group_filters = [gf.strip().lower() for gf in row[2].split(",")]
 
+                if len(set(publication_filters).intersection(set(group_filters))) > 0:
+                    groups.append(row)
+
+            num_groups = len(groups)
+
+            print_panel(f"This post is going to be publish in {num_groups} groups, do "
+                        f"not close the browser")
+
+            for index, group in enumerate(track(groups, "Publishing...")):
                 try:
-                    # Navigate to the group
-                    navigate(driver, group_url)
+                    group_name = group[0]
+                    group_url = group[1]
+                    group_info = f"{group_name} - {group_url}"
 
-                    if "| Facebook" not in driver.title:
-                        print_panel(
-                            f"Group {group_name} does not exist or is not available",
-                            "warning")
-                        continue
+                    print_panel(group_info)
 
                     try:
-                        write_something = find_element(
-                            driver,
-                            By.XPATH,
-                            "//span[contains(text(), 'Write something')]")
-                        write_something.click()
-                    except NoSuchElementException:
+                        # Navigate to the group
+                        navigate(page, group_url)
+
+                        sleep(2)
+
+                        if "| Facebook" not in page.title():
+                            print_panel(
+                                f"Group {group_name} does not exist or is not "
+                                f"available",
+                                "warning"
+                            )
+
+                            continue
+
+                        write_something = page.get_by_role(
+                            "button",
+                            name=re.compile("Write something.*")
+                        )
+                        start_discussion = page.get_by_role(
+                            "button",
+                            name=re.compile("Start discussion.*")
+                        )
+
                         try:
-                            start_discussion = find_element(
-                                driver,
-                                By.XPATH,
-                                "//span[contains(text(), 'Start discussion')]")
-                            start_discussion.click()
-                        except NoSuchElementException:
-                            # Go to Discussion tab
-                            discussion_tab = find_element(
-                                driver,
-                                By.CSS_SELECTOR,
-                                "a[href*='buy_sell_discussion']")
-                            discussion_tab.click()
+                            expect(
+                                write_something.or_(start_discussion)
+                            ).to_be_visible(timeout=3000)
+
+                            if write_something.is_visible():
+                                write_something.click(force=True)
+                            elif start_discussion.is_visible():
+                                start_discussion.click(force=True)
+                        except AssertionError:
+                            page.locator(
+                                "a[href*='buy_sell_discussion']"
+                            ).click(force=True)
+
+                            page.wait_for_url(
+                                re.compile(".*/buy_sell_discussion")
+                            )
+
+                            sleep(2)
 
                             try:
-                                write_something = find_element(
-                                    driver,
-                                    By.XPATH,
-                                    "//span[contains(text(), 'Write something')]")
-                                write_something.click()
-                            except NoSuchElementException:
-                                # Otherwise find the Start Discussion element
-                                start_discussion = find_element(
-                                    driver,
-                                    By.XPATH,
-                                    "//span[contains(text(), 'Start discussion')]")
-                                start_discussion.click()
+                                expect(
+                                    write_something.or_(start_discussion)
+                                ).to_be_visible(timeout=3000)
 
-                    sleep(2)
-                    textarea = driver.switch_to.active_element
+                                if write_something.is_visible():
+                                    write_something.click(force=True)
+                                elif start_discussion.is_visible():
+                                    start_discussion.click(force=True)
+                            except AssertionError:
+                                groups_with_errors.append(
+                                    (group_name, group_url,
+                                     "Cannot find any way to post")
+                                )
 
-                    # Copy the description to the clipboard
-                    pyperclip.copy(description)
-                    sleep(1)
+                                continue
 
-                    # Paste the description
-                    textarea.send_keys(Keys.CONTROL + "v")
-                    sleep(2)
+                        post_button = page.get_by_role(
+                            "button", name="Post", exact=True
+                        )
+                        post_button.wait_for()
 
-                    # Find Photo/Video element and click it
-                    photo_video_el = find_element(
-                        driver,
-                        By.CSS_SELECTOR,
-                        '[aria-label="Photo/video"]')
-                    photo_video_el.click()
-                    sleep(1)
+                        textarea_create_public_post = page.get_by_label(
+                            re.compile("Create a public post.*")
+                        )
+                        textarea_write_something = page.get_by_label(
+                            re.compile("Write something.*")
+                        )
 
-                    # Get the file input element
-                    file_input = find_element(
-                        driver,
-                        By.CSS_SELECTOR,
-                        '[accept="image/*,image/heif,image/heic,video/*,video/mp4,'
-                        'video/x-m4v,video/x-matroska,.mkv"]')
+                        # Expect the textarea to be visible
+                        expect(
+                            textarea_create_public_post.or_(textarea_write_something)
+                        ).to_be_visible()
 
-                    # Upload the images
-                    files = "\n".join([image.absolute().as_posix() for image in images])
-                    sleep(1)
-                    file_input.send_keys(files)
-                    sleep(2)
+                        description = pick_random_description(descriptions)
 
-                    # Press the Post button
-                    post_button = find_element(
-                        driver,
-                        By.XPATH,
-                        "//span[text()='Post']")
-                    post_button.click()
+                        # Fill the description
+                        if textarea_write_something.is_visible():
+                            textarea_write_something.fill(description)
+                        elif textarea_create_public_post.is_visible():
+                            textarea_create_public_post.fill(description)
 
-                    print_panel(f"The post has been submitted to the group {group_name}")
+                        # Find Photo/Video element and click it
+                        photo_video = page.get_by_label("Photo/video")
 
-                    posting_el = find_element(
-                        driver,
-                        By.XPATH,
-                        "//span[contains(text(), 'Posting')]")
+                        photo_video.click(force=True)
 
-                    # Explicit wait until the posting text is not displayed
-                    wait = WebDriverWait(driver, 15)
-                    sleep(1)
-                    wait.until(
-                        ec.invisibility_of_element_located(posting_el))
+                        # Get the file input element
+                        file_input = page.locator(
+                            '[accept="image/*,image/heif,image/heic,video/*,'
+                            'video/mp4,video/x-m4v,video/x-matroska,.mkv"]')
 
-                    sleep(1)
-                except NoSuchElementException as e:
-                    groups_with_errors.append((group_name, group_url, e.msg))
+                        # Upload the images
+                        files = [i.absolute().as_posix() for i in images]
+                        file_input.set_input_files(files)
+
+                        sleep(2)
+
+                        # Press the Post button
+                        post_button.click(force=True)
+
+                        # Posting element
+                        posting_el = page.get_by_text(re.compile("Posting.*"))
+
+                        # Wait until the posting text is detached
+                        posting_el.wait_for(state="detached")
+
+                        print_panel(f"The post has been submitted to {group_name}")
+
+                        # Wait a random time between 90 seconds and 150 seconds
+                        if (index + 1) % 5 == 0:
+                            wait_random_seconds(90, 150)
+                        # Wait a random time between 35 seconds and 55 seconds
+                        else:
+                            wait_random_seconds(35, 55)
+                    # Playwright Error
+                    except Error as e:
+                        groups_with_errors.append((group_name, group_url, e.message))
+
+                        continue
+                    # Any exception
+                    except Exception as e:
+                        groups_with_errors.append((group_name, group_url, str(e)))
+
+                        continue
+                except IndexError as e:
+                    print_panel(f"{e}", "warning")
                     continue
-                except ElementClickInterceptedException as e:
-                    groups_with_errors.append((group_name, group_url, e.msg))
-                    continue
-                # This is a general exception
-                except WebDriverException as e:
-                    groups_with_errors.append((group_name, group_url, e.msg))
-                    continue
-                # Catch any exception
-                except Exception as e:
-                    groups_with_errors.append((group_name, group_url, str(e)))
-                    continue
-            except IndexError as e:
-                print_panel(f"{e}", "warning")
-                continue
 
-    print_panel("The task has been completed")
+        print_panel("The task has been completed")
 
-    if groups_with_errors:
-        print_panel("Groups with errors", "warning")
-        for group in groups_with_errors:
-            print_panel(f"{group[0]} - {group[1]} - {group[2]}", "warning")
+        if groups_with_errors:
+            print_panel("Groups with errors", "warning")
+            for group in groups_with_errors:
+                print_panel(f"{group[0]} - {group[1]} - {group[2]}", "warning")
 
-    # Write to a file log
-    # publication timestamp groups without_errors with_errors
-    with_errors = len(groups_with_errors)
-    without_errors = num_groups - with_errors
-    line = [post, datetime.now(), num_groups, without_errors, with_errors]
+        # Write to a file log
+        # publication timestamp groups without_errors with_errors
+        with_errors = len(groups_with_errors)
+        without_errors = num_groups - with_errors
+        line = [post, datetime.now(), num_groups, without_errors, with_errors]
 
-    with open(posts_folder_path / "log.csv", "a") as log_file:
-        writer = csv.writer(log_file, delimiter=";")
-        writer.writerow(line)
+        with open(posts_folder_path / "log.csv", "a") as log_file:
+            writer = csv.writer(log_file, delimiter=";")
+            writer.writerow(line)
 
-    exit_app()
+        exit_app()
 
 
 @app.callback()
@@ -392,49 +295,38 @@ def callback(
             typer.Option(
                 help="The Chrome binary path"
             )
-        ] = chrome_binary_path_,
-        chrome_driver_path: Annotated[
-            Optional[str],
-            typer.Option(
-                help="The Chrome driver path"
-            )
-        ] = chrome_driver_path_,
-        chrome_config_path: Annotated[
-            Optional[str],
-            typer.Option(
-                help="The Chrome config path"
-            )
-        ] = chrome_config_path_,
-        chrome_profile: Annotated[
-            Optional[str],
-            typer.Option(
-                help="The Chrome profile"
-            )
-        ] = chrome_profile_,
+        ] = CHROME_BINARY_PATH,
         headless: Annotated[
             Optional[bool],
             typer.Option(
                 help="Run the browser in headless mode"
             )
-        ] = False,
+        ] = True,
         posts_folder_path: Annotated[
             Optional[str],
             typer.Option(
                 help="The folder containing the posts"
             )
-        ] = posts_folder_path_
+        ] = POST_FOLDER_PATH
 ):
     """
     Automate facebook posts.
     """
-    # Find available posts
     posts_folder = Path(posts_folder_path)
 
+    # Profile folder
+    profile_folder = Path(posts_folder) / "profile"
+
+    # If not exists, create it
+    if not profile_folder.exists():
+        profile_folder.mkdir()
+
+    # Find available posts
     if not posts_folder.exists():
         print_panel(f"Folder {posts_folder_path} does not exist", "error")
     else:
         for file in posts_folder.iterdir():
-            if file.is_dir():
+            if file.is_dir() and file.name != "profile":
                 available_posts.append(file.name)
 
         if not available_posts:
@@ -442,14 +334,10 @@ def callback(
 
         ctx.obj = {
             "chrome_binary_path": chrome_binary_path,
-            "chrome_driver_path": chrome_driver_path,
             "headless": headless,
-            "chrome_config_path": chrome_config_path,
-            "chrome_profile": chrome_profile,
-            "posts_folder_path": posts_folder_path
+            "posts_folder_path": posts_folder_path,
+            "available_posts": available_posts
         }
-
-    pass
 
 
 if __name__ == "__main__":
