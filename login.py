@@ -1,5 +1,6 @@
 import typer
 from playwright.sync_api import sync_playwright
+from rich.prompt import Prompt
 
 from common_functions import launch_browser, is_logged_in, print_panel
 
@@ -24,6 +25,7 @@ def login(
 
         print_panel(
             "Please, [blue]login manually into your Facebook account[/blue]")
-        input("Press ENTER once you are logged in...")
+
+        Prompt.ask("Press Enter when you are logged in")
 
         page.close()

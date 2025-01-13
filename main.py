@@ -10,10 +10,12 @@ import click
 import typer
 from playwright.sync_api import sync_playwright, expect, Error
 from rich.progress import track
+from rich.prompt import Confirm
+from rich.status import Status
 
 import login
-from common_functions import print_panel, validate_path, is_logged_in, launch_browser, \
-    navigate, wait_random_seconds, exit_app
+from common_functions import print_panel, validate_path, launch_browser, \
+    navigate, wait_random_seconds, exit_app, is_logged_in
 from constants import CHROME_BINARY_PATH, POST_FOLDER_PATH
 
 available_posts = []
@@ -93,19 +95,25 @@ def publish(
     print_panel(f"Filters: {publication_filters}")
 
     with sync_playwright() as p:
-        page = launch_browser(ctx, p)
+        with Status("Initializing ...") as status:
+            status.update("Launching browser ...")
 
-        print_panel("Checking if the user is logged in...")
-        if not is_logged_in(page):
-            print_panel(
-                "You are not logged in, [blue]please sign in manually into your Facebook "
-                "account[/blue] using the [blue]login[/blue] command and set your "
-                "Facebook profile if necessary, then try again",
-                "error"
-            )
+            page = launch_browser(ctx, p)
 
-        # Press ENTER to continue
-        input("Press ENTER to continue the process...")
+            status.update("Checking if the user is logged in...")
+
+            if not is_logged_in(page):
+                print_panel(
+                    "You are not logged in, [blue]please sign in manually into your "
+                    "Facebook account[/blue] using the [blue]login[/blue] command and "
+                    "set your Facebook profile if necessary, then try again",
+                    "error"
+                )
+
+        is_user_ready = Confirm.ask("Do you want to start the publication process?")
+
+        if not is_user_ready:
+            exit_app()
 
         groups_with_errors = []
 
@@ -245,7 +253,13 @@ def publish(
                         # Wait until the posting text is detached
                         posting_el.wait_for(state="detached")
 
-                        print_panel(f"The post has been submitted to {group_name}")
+                        print_panel(
+                            f"The post has been submitted to {group_name}", "success"
+                        )
+
+                        # Do not wait if the last group is reached
+                        if index == num_groups - 1:
+                            continue
 
                         # Wait a random time between 90 seconds and 150 seconds
                         if (index + 1) % 5 == 0:
@@ -267,7 +281,7 @@ def publish(
                     print_panel(f"{e}", "warning")
                     continue
 
-        print_panel("The task has been completed")
+        print_panel("The task has been completed", "success")
 
         if groups_with_errors:
             print_panel("Groups with errors", "warning")
@@ -314,17 +328,17 @@ def callback(
     """
     posts_folder = Path(posts_folder_path)
 
-    # Profile folder
-    profile_folder = Path(posts_folder) / "profile"
-
-    # If not exists, create it
-    if not profile_folder.exists():
-        profile_folder.mkdir()
-
     # Find available posts
     if not posts_folder.exists():
         print_panel(f"Folder {posts_folder_path} does not exist", "error")
     else:
+        # Profile folder
+        profile_folder = Path(posts_folder) / "profile"
+
+        # If not exists, create it
+        if not profile_folder.exists():
+            profile_folder.mkdir()
+
         for file in posts_folder.iterdir():
             if file.is_dir() and file.name != "profile":
                 available_posts.append(file.name)

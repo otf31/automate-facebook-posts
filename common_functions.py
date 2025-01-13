@@ -24,16 +24,14 @@ def launch_browser(
     """
     chrome_binary_path = ctx.obj["chrome_binary_path"]
     headless = ctx.obj["headless"]
-
-    print("[green]Launching browser...[/green]")
-
+    
     try:
         browser = p.chromium.launch_persistent_context(
             executable_path=chrome_binary_path,
             user_data_dir=CHROME_USER_DATA_DIR,
-            headless=headless,
-            # args=["--profile-directory=%s" % chrome_profile]
+            headless=headless
         )
+
         page = browser.pages[0]
 
         return page
@@ -66,7 +64,7 @@ def print_panel(msg: str, msg_type: str = "info"):
         panel.style = "red"
     elif msg_type == "warning":
         panel.style = "yellow"
-    else:
+    elif msg_type == "success":
         panel.style = "green"
 
     print(panel)
