@@ -28,6 +28,29 @@ def pick_random_description(descriptions: List[Path]):
         return description_file.read().strip()
 
 
+def read_filters(filters_file_path: Path):
+    with open(filters_file_path, "r") as filters_file:
+        text = filters_file.read()
+
+        return [f.strip().lower() for f in text.split(",")]
+
+
+def read_groups(groups_file_path: Path, publication_filters: List[str]):
+    groups = []
+
+    with open(groups_file_path, "r") as groups_file:
+        reader = csv.reader(groups_file, delimiter=";")
+        rows = list(reader)
+
+        for row in rows:
+            group_filters = [gf.strip().lower() for gf in row[2].split(",")]
+
+            if len(set(publication_filters).intersection(set(group_filters))) > 0:
+                groups.append(row)
+
+    return groups
+
+
 app = typer.Typer(no_args_is_help=True)
 app.add_typer(login.app)
 
@@ -53,7 +76,7 @@ def publish(
     images_folder_path = post_path / "images"
     descriptions_folder_path = post_path / "descriptions"
     filters_file_path = post_path / "filters.txt"
-    groups_file_path = posts_folder_path / "groups.csv"
+    groups_file_path = posts_folder_path / "groups-test.csv"
 
     # Validate images folder
     validate_path(images_folder_path, "dir")
@@ -67,9 +90,8 @@ def publish(
     # Validate filters file
     validate_path(filters_file_path, "file")
 
-    images_exts = [".jpg", ".jpeg", ".png"]
-
     # Images
+    images_exts = [".jpg", ".jpeg", ".png"]
     images = [
         image for image in images_folder_path.iterdir() if
         image.suffix in images_exts
@@ -87,12 +109,20 @@ def publish(
     print_panel(pick_random_description(descriptions))
 
     # Filters
-    publication_filters: list[str]
-    with open(filters_file_path, "r") as filters_file:
-        text = filters_file.read()
-        publication_filters = [f.strip().lower() for f in text.split(",")]
+    publication_filters = read_filters(filters_file_path)
 
     print_panel(f"Filters: {publication_filters}")
+
+    # Groups
+    groups = read_groups(groups_file_path, publication_filters)
+    num_groups = len(groups)
+    groups_with_errors = []
+
+    print_panel(
+        f"This post is going to be publish in {num_groups} groups, do "
+        f"not close the terminal or the browser until the process is "
+        f"completed"
+    )
 
     with sync_playwright() as p:
         with Status("Initializing ...") as status:
@@ -115,56 +145,57 @@ def publish(
         if not is_user_ready:
             exit_app()
 
-        groups_with_errors = []
+        for index, group in enumerate(track(groups, "Publishing...")):
+            try:
+                group_name = group[0]
+                group_url = group[1]
+                group_info = f"{group_name} - {group_url}"
 
-        # Read the groups file
-        with open(groups_file_path, "r") as groups_file:
-            reader = csv.reader(groups_file, delimiter=";")
-            rows = list(reader)
-            groups = []
+                print_panel(group_info)
 
-            for row in rows:
-                group_filters = [gf.strip().lower() for gf in row[2].split(",")]
-
-                if len(set(publication_filters).intersection(set(group_filters))) > 0:
-                    groups.append(row)
-
-            num_groups = len(groups)
-
-            print_panel(f"This post is going to be publish in {num_groups} groups, do "
-                        f"not close the browser")
-
-            for index, group in enumerate(track(groups, "Publishing...")):
                 try:
-                    group_name = group[0]
-                    group_url = group[1]
-                    group_info = f"{group_name} - {group_url}"
+                    # Navigate to the group
+                    navigate(page, group_url)
 
-                    print_panel(group_info)
+                    sleep(2)
+
+                    if "| Facebook" not in page.title():
+                        print_panel(
+                            f"Group {group_name} does not exist or is not "
+                            f"available",
+                            "warning"
+                        )
+
+                        continue
+
+                    write_something = page.get_by_role(
+                        "button",
+                        name=re.compile("Write something.*")
+                    )
+                    start_discussion = page.get_by_role(
+                        "button",
+                        name=re.compile("Start discussion.*")
+                    )
 
                     try:
-                        # Navigate to the group
-                        navigate(page, group_url)
+                        expect(
+                            write_something.or_(start_discussion)
+                        ).to_be_visible(timeout=3000)
+
+                        if write_something.is_visible():
+                            write_something.click(force=True)
+                        elif start_discussion.is_visible():
+                            start_discussion.click(force=True)
+                    except AssertionError:
+                        page.locator(
+                            "a[href*='buy_sell_discussion']"
+                        ).click(force=True)
+
+                        page.wait_for_url(
+                            re.compile(".*/buy_sell_discussion")
+                        )
 
                         sleep(2)
-
-                        if "| Facebook" not in page.title():
-                            print_panel(
-                                f"Group {group_name} does not exist or is not "
-                                f"available",
-                                "warning"
-                            )
-
-                            continue
-
-                        write_something = page.get_by_role(
-                            "button",
-                            name=re.compile("Write something.*")
-                        )
-                        start_discussion = page.get_by_role(
-                            "button",
-                            name=re.compile("Start discussion.*")
-                        )
 
                         try:
                             expect(
@@ -176,110 +207,88 @@ def publish(
                             elif start_discussion.is_visible():
                                 start_discussion.click(force=True)
                         except AssertionError:
-                            page.locator(
-                                "a[href*='buy_sell_discussion']"
-                            ).click(force=True)
-
-                            page.wait_for_url(
-                                re.compile(".*/buy_sell_discussion")
+                            groups_with_errors.append(
+                                (group_name, group_url,
+                                 "Cannot find any way to post")
                             )
 
-                            sleep(2)
+                            continue
 
-                            try:
-                                expect(
-                                    write_something.or_(start_discussion)
-                                ).to_be_visible(timeout=3000)
+                    post_button = page.get_by_role(
+                        "button", name="Post", exact=True
+                    )
+                    post_button.wait_for()
 
-                                if write_something.is_visible():
-                                    write_something.click(force=True)
-                                elif start_discussion.is_visible():
-                                    start_discussion.click(force=True)
-                            except AssertionError:
-                                groups_with_errors.append(
-                                    (group_name, group_url,
-                                     "Cannot find any way to post")
-                                )
+                    textarea_create_public_post = page.get_by_label(
+                        re.compile("Create a public post.*")
+                    )
+                    textarea_write_something = page.get_by_label(
+                        re.compile("Write something.*")
+                    )
 
-                                continue
+                    # Expect the textarea to be visible
+                    expect(
+                        textarea_create_public_post.or_(textarea_write_something)
+                    ).to_be_visible()
 
-                        post_button = page.get_by_role(
-                            "button", name="Post", exact=True
-                        )
-                        post_button.wait_for()
+                    description = pick_random_description(descriptions)
 
-                        textarea_create_public_post = page.get_by_label(
-                            re.compile("Create a public post.*")
-                        )
-                        textarea_write_something = page.get_by_label(
-                            re.compile("Write something.*")
-                        )
+                    # Fill the description
+                    if textarea_write_something.is_visible():
+                        textarea_write_something.fill(description)
+                    elif textarea_create_public_post.is_visible():
+                        textarea_create_public_post.fill(description)
 
-                        # Expect the textarea to be visible
-                        expect(
-                            textarea_create_public_post.or_(textarea_write_something)
-                        ).to_be_visible()
+                    # Find Photo/Video element and click it
+                    photo_video = page.get_by_label("Photo/video")
 
-                        description = pick_random_description(descriptions)
+                    photo_video.click(force=True)
 
-                        # Fill the description
-                        if textarea_write_something.is_visible():
-                            textarea_write_something.fill(description)
-                        elif textarea_create_public_post.is_visible():
-                            textarea_create_public_post.fill(description)
+                    # Get the file input element
+                    file_input = page.locator(
+                        '[accept="image/*,image/heif,image/heic,video/*,'
+                        'video/mp4,video/x-m4v,video/x-matroska,.mkv"]')
 
-                        # Find Photo/Video element and click it
-                        photo_video = page.get_by_label("Photo/video")
+                    # Upload the images
+                    files = [i.absolute().as_posix() for i in images]
+                    file_input.set_input_files(files)
 
-                        photo_video.click(force=True)
+                    sleep(2)
 
-                        # Get the file input element
-                        file_input = page.locator(
-                            '[accept="image/*,image/heif,image/heic,video/*,'
-                            'video/mp4,video/x-m4v,video/x-matroska,.mkv"]')
+                    # Press the Post button
+                    post_button.click(force=True)
 
-                        # Upload the images
-                        files = [i.absolute().as_posix() for i in images]
-                        file_input.set_input_files(files)
+                    # Posting element
+                    posting_el = page.get_by_text(re.compile("Posting.*"))
 
-                        sleep(2)
+                    # Wait until the posting text is detached
+                    posting_el.wait_for(state="detached")
 
-                        # Press the Post button
-                        post_button.click(force=True)
+                    print_panel(
+                        f"The post has been submitted to {group_name}", "success"
+                    )
+                # Playwright Error
+                except Error as e:
+                    groups_with_errors.append((group_name, group_url, e.message))
 
-                        # Posting element
-                        posting_el = page.get_by_text(re.compile("Posting.*"))
+                    continue
+                # Any exception
+                except Exception as e:
+                    groups_with_errors.append((group_name, group_url, str(e)))
 
-                        # Wait until the posting text is detached
-                        posting_el.wait_for(state="detached")
+                    continue
 
-                        print_panel(
-                            f"The post has been submitted to {group_name}", "success"
-                        )
-                    # Playwright Error
-                    except Error as e:
-                        groups_with_errors.append((group_name, group_url, e.message))
-
-                        continue
-                    # Any exception
-                    except Exception as e:
-                        groups_with_errors.append((group_name, group_url, str(e)))
-
-                        continue
-
-                    # Do not wait if the last group is reached
-                    if index == num_groups - 1:
-                        continue
-
+                # Do not wait if the last group is reached
+                if index < num_groups - 1:
                     # Wait a random time between 90 seconds and 150 seconds
                     if (index + 1) % 5 == 0:
                         wait_random_seconds(90, 150)
                     # Wait a random time between 35 seconds and 55 seconds
                     else:
                         wait_random_seconds(35, 55)
-                except IndexError as e:
-                    print_panel(f"{e}", "warning")
-                    continue
+            except IndexError as e:
+                print_panel(f"{e}", "warning")
+                continue
 
         print_panel("The task has been completed", "success")
 
@@ -298,8 +307,6 @@ def publish(
             writer = csv.writer(log_file, delimiter=";")
 
             writer.writerow(line)
-
-        exit_app()
 
 
 @app.callback()

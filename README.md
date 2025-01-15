@@ -87,6 +87,7 @@ filters `filter2` is present in the `filters.txt` file.
 ### Log file (log.csv)
 The log file is a CSV file that contains the information about the posts that have 
 been published.
+
 The file must have the following columns:
 - `post`: The name of the folder where the post is stored
 - `timestamp`: The timestamp when the post was published
@@ -98,13 +99,18 @@ The file must have the following columns:
 
 ### Publish posts
 ```shell
-./autofbpost publish
+autofbpost publish
 Select a post (1, 2, 3, 4): 1
 ```
 The available options are the folders inside the posts folder.
 
 This command also will check whether the user is logged in or not. If there is not a
 valid Facebook session, then login process must be done manually using the `login` command.
+
+### Login
+```shell
+autofbpost login
+```
 
 ## CLI arguments, options and commands
 ### Options
