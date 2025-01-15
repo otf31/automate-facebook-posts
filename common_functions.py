@@ -1,10 +1,9 @@
 import random
-import re
 from pathlib import Path
 from time import sleep
 
 import typer
-from playwright.sync_api import Playwright, Error, Page
+from playwright.sync_api import Playwright, Error, Page, expect
 from rich import print
 from rich.panel import Panel
 
@@ -42,11 +41,14 @@ def launch_browser(
 def is_logged_in(page: Page):
     try:
         navigate(page, FACEBOOK_URL + "/groups/feed/")
-        page.wait_for_url(re.compile(".*/groups/feed/"))
+
+        expect(page).to_have_title("Groups | Facebook")
+
+        return True
+    except AssertionError:
+        return False
     except Error as e:
         print_panel(f"Error: {e}", "error")
-
-    return "Groups | Facebook" in page.title()
 
 
 def navigate(page: Page, url: str):

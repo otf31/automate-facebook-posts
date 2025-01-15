@@ -256,17 +256,6 @@ def publish(
                         print_panel(
                             f"The post has been submitted to {group_name}", "success"
                         )
-
-                        # Do not wait if the last group is reached
-                        if index == num_groups - 1:
-                            continue
-
-                        # Wait a random time between 90 seconds and 150 seconds
-                        if (index + 1) % 5 == 0:
-                            wait_random_seconds(90, 150)
-                        # Wait a random time between 35 seconds and 55 seconds
-                        else:
-                            wait_random_seconds(35, 55)
                     # Playwright Error
                     except Error as e:
                         groups_with_errors.append((group_name, group_url, e.message))
@@ -277,6 +266,17 @@ def publish(
                         groups_with_errors.append((group_name, group_url, str(e)))
 
                         continue
+
+                    # Do not wait if the last group is reached
+                    if index == num_groups - 1:
+                        continue
+
+                    # Wait a random time between 90 seconds and 150 seconds
+                    if (index + 1) % 5 == 0:
+                        wait_random_seconds(90, 150)
+                    # Wait a random time between 35 seconds and 55 seconds
+                    else:
+                        wait_random_seconds(35, 55)
                 except IndexError as e:
                     print_panel(f"{e}", "warning")
                     continue
@@ -296,6 +296,7 @@ def publish(
 
         with open(posts_folder_path / "log.csv", "a") as log_file:
             writer = csv.writer(log_file, delimiter=";")
+            
             writer.writerow(line)
 
         exit_app()

@@ -131,9 +131,7 @@ valid Facebook session, then login process must be done manually using the `logi
 
 ## Build
 ```shell
-python -m nuitka --onefile main.py --include-module=login 
---include-module=common_functions  --include-module=constants 
---playwright-include-browser=none --output-filename=autofbpost
+python -m nuitka --onefile --include-module=login --include-module=common_functions  --include-module=constants --playwright-include-browser=none --output-filename=autofbpost main.py
 ```
 
 ## Resources
