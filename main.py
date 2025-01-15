@@ -296,7 +296,7 @@ def publish(
 
         with open(posts_folder_path / "log.csv", "a") as log_file:
             writer = csv.writer(log_file, delimiter=";")
-            
+
             writer.writerow(line)
 
         exit_app()
@@ -350,8 +350,7 @@ def callback(
         ctx.obj = {
             "chrome_binary_path": chrome_binary_path,
             "headless": headless,
-            "posts_folder_path": posts_folder_path,
-            "available_posts": available_posts
+            "posts_folder_path": posts_folder_path
         }
 
 
