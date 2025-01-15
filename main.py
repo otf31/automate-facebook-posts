@@ -76,7 +76,7 @@ def publish(
     images_folder_path = post_path / "images"
     descriptions_folder_path = post_path / "descriptions"
     filters_file_path = post_path / "filters.txt"
-    groups_file_path = posts_folder_path / "groups-test.csv"
+    groups_file_path = posts_folder_path / "groups.csv"
 
     # Validate images folder
     validate_path(images_folder_path, "dir")

@@ -1,4 +1,5 @@
 import random
+import re
 from pathlib import Path
 from time import sleep
 
@@ -23,7 +24,7 @@ def launch_browser(
     """
     chrome_binary_path = ctx.obj["chrome_binary_path"]
     headless = ctx.obj["headless"]
-    
+
     try:
         browser = p.chromium.launch_persistent_context(
             executable_path=chrome_binary_path,
@@ -42,7 +43,7 @@ def is_logged_in(page: Page):
     try:
         navigate(page, FACEBOOK_URL + "/groups/feed/")
 
-        expect(page).to_have_title("Groups | Facebook")
+        expect(page).to_have_title(re.compile(r".*Groups \| Facebook"))
 
         return True
     except AssertionError:
