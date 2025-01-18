@@ -280,12 +280,12 @@ def publish(
 
                 # Do not wait if the last group is reached
                 if index < num_groups - 1:
-                    # Wait a random time between 90 seconds and 150 seconds
+                    # Wait a random time between 90 seconds and 130 seconds
                     if (index + 1) % 5 == 0:
-                        wait_random_seconds(90, 150)
-                    # Wait a random time between 35 seconds and 55 seconds
+                        wait_random_seconds(90, 130)
+                    # Wait a random time between 45 seconds and 65 seconds
                     else:
-                        wait_random_seconds(35, 55)
+                        wait_random_seconds(45, 65)
             except IndexError as e:
                 print_panel(f"{e}", "warning")
                 continue
