@@ -149,3 +149,7 @@ python -m nuitka --onefile --include-module=login --include-module=common_functi
 - Match one **or** more elements with Playwright: https://playwright.dev/python/docs/locators#matching-one-of-the-two-alternative-locators
 - Bypass actionability checks: https://playwright.dev/python/docs/api/class-locator#locator-click-option-force
 - A single command in a separate file: https://typer.tiangolo.com/tutorial/one-file-per-command/?h=add_typer#main-module-mainpy
+- Works with files in Pyfilesystem2: https://docs.pyfilesystem.org/en/latest/reference/base.html?highlight=open#fs.base.FS.open
+- Iterate resources of a filesystem and filter: https://docs.pyfilesystem.org/en/latest/reference/base.html?highlight=filterdir#fs.base.FS.filterdir
+- Get a absolute path a resource into a filesystem: https://docs.pyfilesystem.org/en/latest/concepts.html#system-paths
+- split a path into head and tail: https://docs.pyfilesystem.org/en/latest/reference/path.html?highlight=split#fs.path.split

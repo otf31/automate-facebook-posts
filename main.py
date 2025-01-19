@@ -2,13 +2,15 @@ import csv
 import random
 import re
 from datetime import datetime
-from pathlib import Path
 from time import sleep
-from typing import Annotated, Optional, List
+from typing import Annotated, Optional
 
 import click
+import fs
 import typer
+from fs import open_fs
 from playwright.sync_api import sync_playwright, expect, Error
+from rich.pretty import Pretty
 from rich.progress import track
 from rich.prompt import Confirm
 from rich.status import Status
@@ -16,46 +18,116 @@ from rich.status import Status
 import login
 from common_functions import print_panel, validate_path, launch_browser, \
     navigate, wait_random_seconds, exit_app, is_logged_in
-from constants import CHROME_BINARY_PATH, POST_FOLDER_PATH
+from constants import CHROME_BINARY_PATH, POSTS_FOLDER_PATH
 
 available_posts = []
 
 
-def pick_random_description(descriptions: List[Path]):
-    description = random.choice(descriptions)
+def pick_random_description(descriptions: list[str]) -> str:
+    """
+    Pick a random description from a list of descriptions.
+    :param descriptions: A list containing the descriptions.
+    :return: A single random description.
+    """
+    description: str = random.choice(descriptions)
 
-    with open(description, "r") as description_file:
-        return description_file.read().strip()
-
-
-def read_filters(filters_file_path: Path):
-    with open(filters_file_path, "r") as filters_file:
-        text = filters_file.read()
-
-        return [f.strip().lower() for f in text.split(",")]
+    return description
 
 
-def read_groups(groups_file_path: Path, publication_filters: List[str]):
+def read_filters(filters_file_path: str) -> list[str]:
+    """
+    Read the publication filters from a file.
+    The filters must be separated by commas.
+    :param filters_file_path: The filters file path.
+    :return: A list of filters.
+    """
+    parent = fs.path.dirname(filters_file_path)
+
+    with open_fs(parent) as parent_fs:
+        with parent_fs.open(fs.path.basename(filters_file_path)) as filters_file:
+            text = filters_file.read()
+
+            return [f.strip().lower() for f in text.split(",")]
+
+
+def read_groups(groups_file_path: str, publication_filters: list[str]) -> list[list[str]]:
+    """
+    Read groups from a CSV file.
+    :param groups_file_path: The groups file path.
+    :param publication_filters: The filters to match the groups.
+    :return: A list of filtered groups according to publication_filters.
+    """
+
     groups = []
+    head, tail = fs.path.split(groups_file_path)
 
-    with open(groups_file_path, "r") as groups_file:
-        reader = csv.reader(groups_file, delimiter=";")
-        rows = list(reader)
+    with open_fs(head) as parent_fs:
+        with parent_fs.open(tail) as groups_file:
+            reader = csv.reader(groups_file, delimiter=";")
 
-        for row in rows:
-            group_filters = [gf.strip().lower() for gf in row[2].split(",")]
+            # Skip the header
+            next(reader)
 
-            if len(set(publication_filters).intersection(set(group_filters))) > 0:
-                groups.append(row)
+            rows = list(reader)
+
+            for row in rows:
+                group_filters = [gf.strip().lower() for gf in row[2].split(",")]
+
+                if len(set(publication_filters).intersection(set(group_filters))) > 0:
+                    groups.append(row)
 
     return groups
 
 
-app = typer.Typer(no_args_is_help=True)
-app.add_typer(login.app)
+def get_descriptions(descriptions_folder_path: str) -> list[str]:
+    """
+    Get descriptions from .txt files from a folder.
+    :param descriptions_folder_path: The descriptions folder path.
+    :return: A list containing the descriptions as strings and stripped.
+    """
+    descriptions = []
+
+    with open_fs(descriptions_folder_path) as descriptions_fs:
+        d = descriptions_fs.filterdir(
+            "/",
+            files=["*.txt"],
+            exclude_dirs=["*"]
+        )
+
+        for file in d:
+            with descriptions_fs.open(file.name) as description_file:
+                descriptions.append(description_file.read().strip())
+
+    return descriptions
 
 
-@app.command()
+def get_images(images_folder_path: str) -> list[str]:
+    """
+    Get images from a folder. The images must be in jpg, jpeg or png format.
+    :param images_folder_path: The images folder path.
+    :return: A list of containing the images absolute paths.
+    """
+    images = []
+
+    with open_fs(images_folder_path) as images_fs:
+        i = images_fs.filterdir(
+            "/",
+            files=["*.jpg", "*.jpeg", "*.png"],
+            exclude_dirs=["*"],
+            namespaces=["details"]
+        )
+
+        for file in i:
+            images.append(images_fs.getsyspath(file.name))
+
+    return images
+
+
+cli = typer.Typer(no_args_is_help=True)
+cli.add_typer(login.cli)
+
+
+@cli.command()
 def publish(
         ctx: typer.Context,
         post: Annotated[
@@ -71,12 +143,12 @@ def publish(
     """
     Publish posts.
     """
-    posts_folder_path = Path(ctx.obj["posts_folder_path"])
-    post_path = posts_folder_path / post
-    images_folder_path = post_path / "images"
-    descriptions_folder_path = post_path / "descriptions"
-    filters_file_path = post_path / "filters.txt"
-    groups_file_path = posts_folder_path / "groups.csv"
+    posts_folder_path = fs.path.abspath(ctx.obj["posts_folder_path"])
+    post_path = fs.path.combine(posts_folder_path, post)
+    images_folder_path = fs.path.combine(post_path, "images")
+    descriptions_folder_path = fs.path.combine(post_path, "descriptions")
+    filters_file_path = fs.path.combine(post_path, "filters.txt")
+    groups_file_path = fs.path.combine(posts_folder_path, "groups.csv")
 
     # Validate images folder
     validate_path(images_folder_path, "dir")
@@ -91,27 +163,19 @@ def publish(
     validate_path(filters_file_path, "file")
 
     # Images
-    images_exts = [".jpg", ".jpeg", ".png"]
-    images = [
-        image for image in images_folder_path.iterdir() if
-        image.suffix in images_exts
-    ]
+    images = get_images(images_folder_path)
 
     print_panel(f"Found {len(images)} images")
 
-    # Descriptions
-    descriptions = [
-        description for description in descriptions_folder_path.iterdir() if
-        description.suffix == ".txt"
-    ]
+    descriptions = get_descriptions(descriptions_folder_path)
 
     # Print a random description
-    print_panel(pick_random_description(descriptions))
+    print_panel(pick_random_description(descriptions), title="Random description")
 
     # Filters
     publication_filters = read_filters(filters_file_path)
 
-    print_panel(f"Filters: {publication_filters}")
+    print_panel(Pretty(publication_filters), title="Filters")
 
     # Groups
     groups = read_groups(groups_file_path, publication_filters)
@@ -119,7 +183,7 @@ def publish(
     groups_with_errors = []
 
     print_panel(
-        f"This post is going to be publish in {num_groups} groups, do "
+        f"This post is going to be publish in [blue]{num_groups}[/] groups, do "
         f"not close the terminal or the browser until the process is "
         f"completed"
     )
@@ -137,7 +201,7 @@ def publish(
                     "You are not logged in, [blue]please sign in manually into your "
                     "Facebook account[/blue] using the [blue]login[/blue] command and "
                     "set your Facebook profile if necessary, then try again",
-                    "error"
+                    msg_type="error"
                 )
 
         is_user_ready = Confirm.ask("Do you want to start the publication process?")
@@ -163,7 +227,7 @@ def publish(
                         print_panel(
                             f"Group {group_name} does not exist or is not "
                             f"available",
-                            "warning"
+                            msg_type="warning"
                         )
 
                         continue
@@ -250,8 +314,7 @@ def publish(
                         'video/mp4,video/x-m4v,video/x-matroska,.mkv"]')
 
                     # Upload the images
-                    files = [i.absolute().as_posix() for i in images]
-                    file_input.set_input_files(files)
+                    file_input.set_input_files(images)
 
                     sleep(2)
 
@@ -265,7 +328,7 @@ def publish(
                     posting_el.wait_for(state="detached")
 
                     print_panel(
-                        f"The post has been submitted to {group_name}", "success"
+                        f"The post has been submitted to {group_name}", msg_type="success"
                     )
                 # Playwright Error
                 except Error as e:
@@ -287,29 +350,37 @@ def publish(
                     else:
                         wait_random_seconds(45, 65)
             except IndexError as e:
-                print_panel(f"{e}", "warning")
+                print_panel(f"{e}", msg_type="warning")
                 continue
 
-        print_panel("The task has been completed", "success")
+        print_panel("The task has been completed", msg_type="success")
 
         if groups_with_errors:
-            print_panel("Groups with errors", "warning")
+            print_panel("Groups with errors", msg_type="warning")
             for group in groups_with_errors:
-                print_panel(f"{group[0]} - {group[1]} - {group[2]}", "warning")
+                print_panel(f"{group[0]} - {group[1]} - {group[2]}", msg_type="warning")
 
         # Write to a file log
-        # publication timestamp groups without_errors with_errors
-        with_errors = len(groups_with_errors)
-        without_errors = num_groups - with_errors
-        line = [post, datetime.now(), num_groups, without_errors, with_errors]
+        # publication timestamp groups without_errors num_failed
+        num_failed = len(groups_with_errors)
+        num_submitted = num_groups - num_failed
+        line = [post, datetime.now(), num_groups, num_submitted, num_failed]
 
-        with open(posts_folder_path / "log.csv", "a") as log_file:
-            writer = csv.writer(log_file, delimiter=";")
+        with open_fs(posts_folder_path) as posts_folder_fs:
+            logs_file_name = "log.csv"
 
-            writer.writerow(line)
+            with posts_folder_fs.open(logs_file_name, "a") as log_file:
+                writer = csv.writer(log_file, delimiter=";")
+
+                if log_file.tell() == 0:
+                    writer.writerow(
+                        ["Post", "Timestamp", "Total groups", "Submitted", "Failed"]
+                    )
+
+                writer.writerow(line)
 
 
-@app.callback()
+@cli.callback()
 def callback(
         ctx: typer.Context,
         chrome_binary_path: Annotated[
@@ -329,37 +400,33 @@ def callback(
             typer.Option(
                 help="The folder containing the posts"
             )
-        ] = POST_FOLDER_PATH
+        ] = POSTS_FOLDER_PATH
 ):
     """
     Automate facebook posts.
     """
-    posts_folder = Path(posts_folder_path)
+    with open_fs(posts_folder_path) as posts_folder_fs:
+        # Find available posts
+        if not posts_folder_fs.exists("/"):
+            print_panel(f"Folder {posts_folder_path} does not exist", msg_type="error")
+        else:
+            # Profile folder (create if not exists)
+            posts_folder_fs.makedir("/profile", recreate=True)
 
-    # Find available posts
-    if not posts_folder.exists():
-        print_panel(f"Folder {posts_folder_path} does not exist", "error")
-    else:
-        # Profile folder
-        profile_folder = Path(posts_folder) / "profile"
+            for path in posts_folder_fs.filterdir(
+                    "/", exclude_files=["*"], exclude_dirs=["profile"]
+            ):
+                available_posts.append(path.name)
 
-        # If not exists, create it
-        if not profile_folder.exists():
-            profile_folder.mkdir()
+            if not available_posts:
+                print_panel(f"No posts found in {posts_folder_path}", msg_type="error")
 
-        for file in posts_folder.iterdir():
-            if file.is_dir() and file.name != "profile":
-                available_posts.append(file.name)
-
-        if not available_posts:
-            print_panel(f"No posts found in {posts_folder_path}", "error")
-
-        ctx.obj = {
-            "chrome_binary_path": chrome_binary_path,
-            "headless": headless,
-            "posts_folder_path": posts_folder_path
-        }
+            ctx.obj = {
+                "chrome_binary_path": chrome_binary_path,
+                "headless": headless,
+                "posts_folder_path": posts_folder_path
+            }
 
 
 if __name__ == "__main__":
-    app()
+    cli()
