@@ -107,20 +107,24 @@ def get_images(images_folder_path: str) -> list[str]:
     :param images_folder_path: The images folder path.
     :return: A list of containing the images absolute paths.
     """
+
+    def natural_sort_key(s):
+        return [int(text) if text.isdigit() else text.lower() for text in
+                re.split(r'(\d+)', s)]
+
     images = []
 
     with open_fs(images_folder_path) as images_fs:
         i = images_fs.filterdir(
             "/",
             files=["*.jpg", "*.jpeg", "*.png"],
-            exclude_dirs=["*"],
-            namespaces=["details"]
+            exclude_dirs=["*"]
         )
 
         for file in i:
             images.append(images_fs.getsyspath(file.name))
 
-    return images
+    return sorted(images, key=natural_sort_key)
 
 
 cli = typer.Typer(no_args_is_help=True)

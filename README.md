@@ -152,4 +152,4 @@ python -m nuitka --onefile --include-module=login --include-module=common_functi
 - Works with files in Pyfilesystem2: https://docs.pyfilesystem.org/en/latest/reference/base.html?highlight=open#fs.base.FS.open
 - Iterate resources of a filesystem and filter: https://docs.pyfilesystem.org/en/latest/reference/base.html?highlight=filterdir#fs.base.FS.filterdir
 - Get a absolute path a resource into a filesystem: https://docs.pyfilesystem.org/en/latest/concepts.html#system-paths
-- split a path into head and tail: https://docs.pyfilesystem.org/en/latest/reference/path.html?highlight=split#fs.path.split
+- Split a path into head and tail: https://docs.pyfilesystem.org/en/latest/reference/path.html?highlight=split#fs.path.split

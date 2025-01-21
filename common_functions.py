@@ -27,11 +27,12 @@ def launch_browser(
     chrome_binary_path = ctx.obj["chrome_binary_path"]
     headless = ctx.obj["headless"]
     posts_folder_path = ctx.obj["posts_folder_path"]
+    chrome_data_dir = fs.path.combine(posts_folder_path, "/profile")
 
     try:
         browser = p.chromium.launch_persistent_context(
             executable_path=chrome_binary_path,
-            user_data_dir=f"{posts_folder_path}profile",
+            user_data_dir=chrome_data_dir,
             headless=headless
         )
 
