@@ -255,13 +255,9 @@ def publish(
                         elif start_discussion.is_visible():
                             start_discussion.click(force=True)
                     except AssertionError:
-                        page.locator(
-                            "a[href*='buy_sell_discussion']"
-                        ).click(force=True)
-
-                        page.wait_for_url(
-                            re.compile(".*/buy_sell_discussion")
-                        )
+                        page.get_by_role(
+                            "tab", name=re.compile("Discussion.*")
+                        ).click(force=True, timeout=5000)
 
                         sleep(2)
 
