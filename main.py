@@ -17,7 +17,7 @@ from rich.status import Status
 
 import login
 from common_functions import print_panel, validate_path, launch_browser, \
-    navigate, wait_random_seconds, exit_app, is_logged_in
+    navigate, wait_random_seconds, exit_app, is_logged_in, get_device_id
 from constants import CHROME_BINARY_PATH, POSTS_FOLDER_PATH
 
 available_posts = []
@@ -382,6 +382,16 @@ def publish(
                     )
 
                 writer.writerow(line)
+
+
+@cli.command()
+def get_id():
+    """
+    Get the unique device id
+    """
+    device_id = get_device_id()
+
+    print_panel(f"{device_id}", title="Device ID")
 
 
 @cli.callback()

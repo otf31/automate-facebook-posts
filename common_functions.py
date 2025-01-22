@@ -4,6 +4,7 @@ from time import sleep
 from typing import Literal, Any
 
 import fs
+import machineid
 import typer
 from fs import open_fs
 from fs.opener.errors import OpenerError
@@ -158,3 +159,11 @@ def wait_random_seconds(start: int, end: int = None) -> None:
         end = start
 
     sleep(random.randint(start, end))
+
+
+def get_device_id() -> str:
+    """
+    Get the device id.
+    :return:
+    """
+    return machineid.hashed_id()

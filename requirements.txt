@@ -4,3 +4,4 @@ nuitka==2.5.9
 click~=8.1.7
 rich~=13.9.4
 fs~=2.4.16
+py-machineid~=0.7.0
