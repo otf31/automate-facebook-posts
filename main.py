@@ -281,7 +281,7 @@ def publish(
                     post_button = page.get_by_role(
                         "button", name="Post", exact=True
                     )
-                    post_button.wait_for()
+                    post_button.wait_for(timeout=6000)
 
                     textarea_create_public_post = page.get_by_label(
                         re.compile("Create a public post.*")
@@ -380,7 +380,7 @@ def publish(
                 writer.writerow(line)
 
 
-@cli.command()
+@cli.command(name="id")
 def get_id():
     """
     Get the unique device id
