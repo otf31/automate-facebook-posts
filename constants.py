@@ -1,5 +1,6 @@
 from fs import open_fs
 
+API_URL = "https://automate-facebook-posts-back.onrender.com/"
 FACEBOOK_URL = "https://www.facebook.com"
 CHROME_BINARY_PATH = "/opt/google/chrome/google-chrome"
 

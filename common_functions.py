@@ -1,107 +1,90 @@
 import random
-import re
 from time import sleep
-from typing import Literal, Any
+from typing import Literal, Any, Callable
 
 import fs
-import machineid
 import typer
 from fs import open_fs
 from fs.opener.errors import OpenerError
-from playwright.sync_api import Playwright, Error, Page, expect
 from rich import print
+from rich.console import group
 from rich.panel import Panel
+from typing_extensions import TypeVar
 
-from constants import FACEBOOK_URL
 
-
-def launch_browser(
-        ctx: typer.Context,
-        p: Playwright
-) -> Page:
+class StyledPanel(Panel):
     """
-    Launch the browser.
-    :param ctx: The Typer context.
-    :param p: The Playwright instance.
-    :return: A browser page.
-    """
-    chrome_binary_path = ctx.obj["chrome_binary_path"]
-    headless = ctx.obj["headless"]
-    posts_folder_path = ctx.obj["posts_folder_path"]
-    chrome_data_dir = fs.path.combine(posts_folder_path, "/profile")
-
-    try:
-        browser = p.chromium.launch_persistent_context(
-            executable_path=chrome_binary_path,
-            user_data_dir=chrome_data_dir,
-            headless=headless
-        )
-
-        page = browser.pages[0]
-
-        return page
-    except Error as e:
-        print_panel(f"Error: {e}", msg_type="error")
-
-
-def is_logged_in(page: Page) -> bool:
-    """
-    Check if the user is logged in.
-    :param page: The browser page instance.
-    :return: A boolean indicating if the user is logged in.
-    :raise AssertionError: If the user is not logged in.
-    :raise playwright.sync_api.Error: If an error occurs during the process.
-    """
-    try:
-        navigate(page, FACEBOOK_URL + "/groups/feed/")
-
-        expect(page).to_have_title(re.compile(r".*Groups \| Facebook"))
-
-        return True
-    except AssertionError:
-        return False
-    except Error as e:
-        print_panel(f"Error: {e}", msg_type="error")
-
-
-def navigate(page: Page, url: str) -> None:
-    """
-    Navigates to the given URL.
-    The errors are handled by the caller function.
-    :param page: The browser page instance.
-    :param url: The URL to navigate to.
-    """
-    page.goto(url)
-
-
-def exit_app():
-    """
-    Exit the Typer application.
-    """
-    raise typer.Exit()
-
-
-def print_panel(msg: Any, title=None, msg_type: str = "info") -> None:
-    """
-    Print a panel with a message and an optional title.
+    A styled panel with a message and an optional title.
     :param msg: Message inside the panel.
     :param title: Optional panel title.
     :param msg_type: info, error, warning or success.
         If error, the application will exit.
     """
-    panel = Panel(msg, title=title, expand=False)
 
-    if msg_type == "error":
-        panel.style = "red"
-    elif msg_type == "warning":
-        panel.style = "yellow"
-    elif msg_type == "success":
-        panel.style = "green"
+    def __init__(
+            self,
+            msg: Any,
+            title=None,
+            msg_type: Literal["info", "error", "warning", "success"] = "info"
+    ):
+        super().__init__(msg, title=title, expand=False)
 
-    print(panel)
+        self.msg_type = msg_type
+        self.title = title
+        self.msg_type = msg_type
 
-    if msg_type == "error":
-        exit_app()
+        if msg_type == "error":
+            self.style = "red"
+        elif msg_type == "warning":
+            self.style = "yellow"
+        elif msg_type == "success":
+            self.style = "green"
+
+
+def print_panel(
+        msg: Any,
+        title=None,
+        msg_type: Literal["info", "error", "warning", "success"] = "info"
+) -> None:
+    """
+    Print a styled panel.
+    :param msg: The message inside the panel.
+    :param title: The optional panel title.
+    :param msg_type: The type of the message: info, error, warning or success.
+    """
+    styled_panel = StyledPanel(msg, title=title, msg_type=msg_type)
+
+    print(styled_panel)
+
+    if styled_panel.msg_type == "error":
+        raise typer.Exit()
+
+
+T = TypeVar("T")
+
+
+# def print_panels_group[T]( -> doesn't work in executable file
+def print_panels_group(
+        iterable: list[T],
+        extract_msg_callback: Callable[[T], str],
+        title: str = None,
+        children_msg_type: Literal["info", "warning", "success"] = "info"
+) -> None:
+    """
+    Print a group of panels.
+    :param iterable: The list of items to iterate.
+    :param extract_msg_callback: A callable that extracts the message from the item.
+    :param title: The title of the main panel.
+    :param children_msg_type: The type of the children panels. Default is info.
+    """
+    @group()
+    def get_panels():
+        for i in iterable:
+            msg = extract_msg_callback(i)
+
+            yield StyledPanel(str(msg), msg_type=children_msg_type)
+
+    print(Panel(get_panels(), title=title))
 
 
 def validate_path(
@@ -159,11 +142,3 @@ def wait_random_seconds(start: int, end: int = None) -> None:
         end = start
 
     sleep(random.randint(start, end))
-
-
-def get_device_id() -> str:
-    """
-    Get the device id.
-    :return:
-    """
-    return machineid.hashed_id()
