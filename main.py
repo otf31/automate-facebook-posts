@@ -295,9 +295,15 @@ def publish(
                 elif start_discussion.is_visible():
                     start_discussion.click(force=True)
 
+                # Posting loading
+                posting_el = page.get_by_text(re.compile("Posting.*"))
+
+                # Post button
                 post_button = page.get_by_role(
                     "button", name="Post", exact=True
                 )
+
+                # Wait for the post button to be visible
                 post_button.wait_for(timeout=6000)
 
                 textarea_create_public_post = page.get_by_label(
@@ -340,11 +346,14 @@ def publish(
 
                 sleep(2)
 
+                # Expect the post button to be enabled
+                expect(post_button).to_be_enabled()
+
                 # Press the Post button
                 post_button.click(force=True)
 
-                # Posting element
-                posting_el = page.get_by_text(re.compile("Posting.*"))
+                # Wait until the posting text is visible
+                posting_el.wait_for(timeout=6000)
 
                 # Wait until the posting text is detached
                 posting_el.wait_for(state="detached")
@@ -384,7 +393,7 @@ def publish(
                 children_msg_type="warning"
             )
 
-        # Write to a file log
+        # Write to log file
         # publication timestamp groups without_errors num_failed
         num_failed = len(groups_with_errors)
         num_submitted = num_groups - num_failed
