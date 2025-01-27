@@ -1,0 +1,9 @@
+fastapi[standard]~=0.115.6
+pydantic~=2.10.5
+sqlmodel~=0.0.22
+pydantic-settings~=2.7.1
+psycopg2-binary~=2.9.10
+SQLAlchemy~=2.0.37
+starlette~=0.41.3
+passlib~=1.7.4
+PyJWT~=2.10.1
