@@ -1,26 +1,2 @@
-# Environments
-.env
-.venv
-env/
-venv/
-ENV/
-env.bak/
-venv.bak/
-
-# Distribution / packaging
-.Python
-build/
-dist/
-main.**/
-
-# Build file
-autofbpost
-main
-
 # JetBrains IDEs
 .idea/
-
-# Byte-compiled / optimized / DLL files
-__pycache__/
-*.py[cod]
-*$py.class
