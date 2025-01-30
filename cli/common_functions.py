@@ -22,10 +22,10 @@ class StyledPanel(Panel):
     """
 
     def __init__(
-            self,
-            msg: Any,
-            title=None,
-            msg_type: Literal["info", "error", "warning", "success"] = "info"
+        self,
+        msg: Any,
+        title=None,
+        msg_type: Literal["info", "error", "warning", "success"] = "info",
     ):
         super().__init__(msg, title=title, expand=False)
 
@@ -42,9 +42,9 @@ class StyledPanel(Panel):
 
 
 def print_panel(
-        msg: Any,
-        title=None,
-        msg_type: Literal["info", "error", "warning", "success"] = "info"
+    msg: Any,
+    title=None,
+    msg_type: Literal["info", "error", "warning", "success"] = "info",
 ) -> None:
     """
     Print a styled panel.
@@ -65,10 +65,10 @@ T = TypeVar("T")
 
 # def print_panels_group[T]( -> doesn't work in executable file
 def print_panels_group(
-        iterable: list[T],
-        extract_msg_callback: Callable[[T], str],
-        title: str = None,
-        children_msg_type: Literal["info", "warning", "success"] = "info"
+    iterable: list[T],
+    extract_msg_callback: Callable[[T], str],
+    title: str = None,
+    children_msg_type: Literal["info", "warning", "success"] = "info",
 ) -> None:
     """
     Print a group of panels.
@@ -77,6 +77,7 @@ def print_panels_group(
     :param title: The title of the main panel.
     :param children_msg_type: The type of the children panels. Default is info.
     """
+
     @group()
     def get_panels():
         for i in iterable:
@@ -88,19 +89,17 @@ def print_panels_group(
 
 
 def validate_path(
-        tail: str,
-        type_: Literal["file", "dir"],
-        min_files: int = None
+    path: str, type_: Literal["file", "dir"], min_files: int = None
 ) -> None:
     """
     Validate the existence of a file or directory.
-    :param tail: Absolute path to the resource.
+    :param path: Absolute path to the resource.
     :param type_: The type of the resource: file or dir.
     :param min_files: If the resource is a directory,
         the minimum number of files it must contain. Default is None.
     :raise fs.opener.errors.OpenerError: Opening a filesystem with an invalid path.
     """
-    head, tail = fs.path.split(tail)
+    head, tail = fs.path.split(path)
     tail_sty = f"[bold blue]{tail}[/]"
     type_sty = f"[blue]{type_}[/]"
 
@@ -109,7 +108,7 @@ def validate_path(
             if not root_fs.exists(tail):
                 print_panel(
                     f"Resource {tail_sty} of type {type_sty} does not exist in {head}",
-                    msg_type="error"
+                    msg_type="error",
                 )
 
             if type_ == "file":
@@ -125,7 +124,7 @@ def validate_path(
                 elif min_files is not None and len(root_fs.listdir(tail)) < min_files:
                     print_panel(
                         f"Folder {tail_sty} must contain at least {min_files} files",
-                        msg_type="error"
+                        msg_type="error",
                     )
     except OpenerError:
         print_panel(f"Path {head} does not exist", msg_type="error")

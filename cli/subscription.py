@@ -16,7 +16,7 @@ def get_device_id() -> str:
     return machineid.hashed_id()
 
 
-def get_subscription_status() -> bool:
+def get_subscription_status() -> bool | None:
     """
     Get the subscription status.
     :return: A boolean indicating if the subscription is active.
@@ -26,17 +26,15 @@ def get_subscription_status() -> bool:
     try:
         r = httpx.get(
             f"{API_URL}check-subscription",
-            params={
-                "machine_id": machine_id
-            },
-            timeout=httpx.Timeout(70)
+            params={"machine_id": machine_id},
+            timeout=httpx.Timeout(70),
         )
 
         if r.status_code >= 400:
             print_panel(
                 f"Your subscription is not active. Please contact support.",
                 title="No active subscription",
-                msg_type="warning"
+                msg_type="warning",
             )
 
             return False
@@ -47,7 +45,7 @@ def get_subscription_status() -> bool:
         print_panel(
             f"Could not connect to the server.",
             title="Connection error",
-            msg_type="error"
+            msg_type="error",
         )
 
 

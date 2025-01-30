@@ -10,9 +10,7 @@ cli = typer.Typer(no_args_is_help=True)
 
 
 @cli.command()
-def manual_mode(
-        ctx: typer.Context
-) -> None:
+def manual_mode(ctx: typer.Context) -> None:
     """
     Open a browser with the given user directory (this command ignore headless option).
     With this command you can perform manual actions in the browser like login into

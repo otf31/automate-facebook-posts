@@ -8,10 +8,7 @@ from common_functions import print_panel
 from constants import FACEBOOK_URL
 
 
-def launch_browser(
-        ctx: typer.Context,
-        p: Playwright
-) -> Page:
+def launch_browser(ctx: typer.Context, p: Playwright) -> Page | None:
     """
     Launch the browser.
     :param ctx: The Typer context.
@@ -27,7 +24,7 @@ def launch_browser(
         browser = p.chromium.launch_persistent_context(
             executable_path=chrome_binary_path,
             user_data_dir=chrome_data_dir,
-            headless=headless
+            headless=headless,
         )
         page = browser.pages[0]
 

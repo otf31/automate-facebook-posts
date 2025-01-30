@@ -24,7 +24,7 @@ from manual_mode import cli as manual_mode
 from subscription import get_device_id, check_active_subscription
 
 
-def version_callback(value: bool):
+def version_callback(value: bool) -> None:
     if value:
         print(__version__)
 
@@ -58,7 +58,9 @@ def read_filters(filters_file_path: str) -> list[str]:
     return [f.strip().lower() for f in text.split(",")]
 
 
-def read_groups(groups_file_path: str, publication_filters: list[str]) -> list[list[str]]:
+def read_groups(
+    groups_file_path: str, publication_filters: list[str]
+) -> list[list[str]]:
     """
     Read groups from a CSV file.
     :param groups_file_path: The groups file path.
@@ -96,11 +98,7 @@ def get_descriptions(descriptions_folder_path: str) -> list[str]:
     descriptions = []
 
     with open_fs(descriptions_folder_path) as descriptions_fs:
-        d = descriptions_fs.filterdir(
-            "/",
-            files=["*.txt"],
-            exclude_dirs=["*"]
-        )
+        d = descriptions_fs.filterdir("/", files=["*.txt"], exclude_dirs=["*"])
 
         for file in d:
             with descriptions_fs.open(file.name) as description_file:
@@ -117,16 +115,16 @@ def get_images(images_folder_path: str) -> list[str]:
     """
 
     def natural_sort_key(s):
-        return [int(text) if text.isdigit() else text.lower() for text in
-                re.split(r'(\d+)', s)]
+        return [
+            int(text) if text.isdigit() else text.lower()
+            for text in re.split(r"(\d+)", s)
+        ]
 
     images = []
 
     with open_fs(images_folder_path) as images_fs:
         i = images_fs.filterdir(
-            "/",
-            files=["*.jpg", "*.jpeg", "*.png"],
-            exclude_dirs=["*"]
+            "/", files=["*.jpg", "*.jpeg", "*.png"], exclude_dirs=["*"]
         )
 
         for file in i:
@@ -143,19 +141,19 @@ available_posts = []
 
 @cli.command()
 def publish(
-        ctx: typer.Context,
-        post: Annotated[
-            str,
-            typer.Option(
-                help="The post. This is a required option, but if not provided, the CLI "
-                     "will prompt the user to enter the value. The available values are "
-                     "the folders (except profile) inside the posts folder where the "
-                     "posts are stored.",
-                prompt="Select a post",
-                show_choices=True,
-                click_type=click.Choice(available_posts)
-            )
-        ]
+    ctx: typer.Context,
+    post: Annotated[
+        str,
+        typer.Option(
+            help="The post. This is a required option, but if not provided, the CLI "
+            "will prompt the user to enter the value. The available values are "
+            "the folders (except profile) inside the posts folder where the "
+            "posts are stored.",
+            prompt="Select a post",
+            show_choices=True,
+            click_type=click.Choice(available_posts),
+        ),
+    ],
 ):
     """
     Publish posts. The available values are the folders inside the posts folder where
@@ -212,8 +210,8 @@ def publish(
     )
 
     with sync_playwright() as p:
-        with Status("Initializing ...") as status:
-            status.update("Launching browser ...")
+        with Status("Initializing...") as status:
+            status.update("Launching browser...")
 
             page = launch_browser(ctx, p)
 
@@ -224,7 +222,7 @@ def publish(
                     "You are not logged in, [blue]please sign in manually into your "
                     "Facebook account[/] using the [blue]manual-mode[/] command "
                     "and set your Facebook profile if necessary, then try again",
-                    msg_type="error"
+                    msg_type="error",
                 )
 
         is_user_ready = Confirm.ask("Do you want to start the publication process?")
@@ -252,37 +250,34 @@ def publish(
 
                 if "| Facebook" not in page.title():
                     print_panel(
-                        f"Group {group_name} does not exist or is not "
-                        f"available",
-                        msg_type="warning"
+                        f"Group {group_name} does not exist or is not " f"available",
+                        msg_type="warning",
                     )
 
                     continue
 
                 write_something = page.get_by_role(
-                    "button",
-                    name=re.compile("Write something.*")
+                    "button", name=re.compile("Write something.*")
                 )
                 start_discussion = page.get_by_role(
-                    "button",
-                    name=re.compile("Start discussion.*")
+                    "button", name=re.compile("Start discussion.*")
                 )
 
                 try:
-                    expect(
-                        write_something.or_(start_discussion)
-                    ).to_be_visible(timeout=3000)
+                    expect(write_something.or_(start_discussion)).to_be_visible(
+                        timeout=3000
+                    )
                 except AssertionError:
-                    page.get_by_role(
-                        "tab", name=re.compile("Discussion.*")
-                    ).click(force=True, timeout=5000)
+                    page.get_by_role("tab", name=re.compile("Discussion.*")).click(
+                        force=True, timeout=5000
+                    )
 
                     sleep(2)
 
                     try:
-                        expect(
-                            write_something.or_(start_discussion)
-                        ).to_be_visible(timeout=3000)
+                        expect(write_something.or_(start_discussion)).to_be_visible(
+                            timeout=3000
+                        )
                     except AssertionError:
                         groups_with_errors.append(
                             (group_name, group_url, "Cannot find any way to post")
@@ -299,9 +294,7 @@ def publish(
                 posting_el = page.get_by_text(re.compile("Posting.*"))
 
                 # Post button
-                post_button = page.get_by_role(
-                    "button", name="Post", exact=True
-                )
+                post_button = page.get_by_role("button", name="Post", exact=True)
 
                 # Wait for the post button to be visible
                 post_button.wait_for(timeout=6000)
@@ -390,7 +383,7 @@ def publish(
                 groups_with_errors,
                 extract_msg_callback=lambda x: f"{x[0]} - {x[1]} - {x[2]}",
                 title="Groups with errors",
-                children_msg_type="warning"
+                children_msg_type="warning",
             )
 
         # Write to log file
@@ -414,7 +407,7 @@ def publish(
                 writer = csv.writer(log_file, delimiter=";")
 
                 writer.writerow(line)
-                
+
         Prompt.ask("Press ENTER to close the browser window and exit...")
 
 
@@ -431,34 +424,25 @@ def get_id():
 # noinspection PyUnusedLocal
 @cli.callback()
 def callback(
-        ctx: typer.Context,
-        chrome_binary_path: Annotated[
-            Optional[str],
-            typer.Option(
-                help="The Chrome binary path"
-            )
-        ] = CHROME_BINARY_PATH,
-        headless: Annotated[
-            Optional[bool],
-            typer.Option(
-                help="Run the browser in headless mode"
-            )
-        ] = True,
-        posts_folder_path: Annotated[
-            Optional[str],
-            typer.Option(
-                help="The folder containing the posts"
-            )
-        ] = POSTS_FOLDER_PATH,
-        version: Annotated[
-            Optional[bool],
-            typer.Option(
-                "--version",
-                help="Show the application version.",
-                callback=version_callback,
-                is_eager=True
-            )
-        ] = None
+    ctx: typer.Context,
+    chrome_binary_path: Annotated[
+        Optional[str], typer.Option(help="The Chrome binary path")
+    ] = CHROME_BINARY_PATH,
+    headless: Annotated[
+        Optional[bool], typer.Option(help="Run the browser in headless mode")
+    ] = True,
+    posts_folder_path: Annotated[
+        Optional[str], typer.Option(help="The folder containing the posts")
+    ] = POSTS_FOLDER_PATH,
+    version: Annotated[
+        Optional[bool],
+        typer.Option(
+            "--version",
+            help="Show the application version.",
+            callback=version_callback,
+            is_eager=True,
+        ),
+    ] = None,
 ):
     """
     Automate facebook posts.
@@ -472,8 +456,7 @@ def callback(
             posts_folder_fs.makedir("/profile", recreate=True)
 
             for path in posts_folder_fs.filterdir(
-                    "/", exclude_files=["*"],
-                    exclude_dirs=["profile"]
+                "/", exclude_files=["*"], exclude_dirs=["profile"]
             ):
                 available_posts.append(path.name)
 
@@ -483,7 +466,7 @@ def callback(
     ctx.obj = {
         "chrome_binary_path": chrome_binary_path,
         "headless": headless,
-        "posts_folder_path": posts_folder_path
+        "posts_folder_path": posts_folder_path,
     }
 
 
