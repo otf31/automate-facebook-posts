@@ -38,9 +38,7 @@ def create_access_token(data: dict, expires_delta: timedelta):
     to_encode.update({"exp": expire})
 
     encoded_jwt = jwt.encode(
-        to_encode,
-        settings.jwt_secret_key,
-        algorithm=settings.jwt_algorithm
+        to_encode, settings.jwt_secret_key, algorithm=settings.jwt_algorithm
     )
 
     return encoded_jwt
@@ -56,10 +54,7 @@ class UserCreateUpdate(BaseModel):
 
 
 @app.post("/register-update")
-def register_update(
-        payload: UserCreateUpdate,
-        session: SessionDep
-) -> User:
+def register_update(payload: UserCreateUpdate, session: SessionDep) -> User:
     """
     Endpoint to create or update a user based on the machine_id and a time delta
     This endpoint will create or update the user's jwt token
@@ -101,9 +96,7 @@ def register_update(
 
     # Create a new jwt token
     access_token_expires = timedelta(
-        days=payload.days,
-        minutes=payload.minutes,
-        seconds=payload.seconds
+        days=payload.days, minutes=payload.minutes, seconds=payload.seconds
     )
     access_token = create_access_token(
         data=jwt_payload, expires_delta=access_token_expires
@@ -120,20 +113,15 @@ def register_update(
 
 
 @app.get("/check-subscription")
-def check_subcscription(machine_id: str, session: SessionDep) -> str:
+def check_subcscription(machine_id: str, session: SessionDep) -> str | None:
     def raise_error(detail):
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail=detail,
-        )
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=detail)
 
-    user = session.exec(
-        select(User).where(User.machine_id == machine_id)
-    ).first()
+    user = session.exec(select(User).where(User.machine_id == machine_id)).first()
 
     # If the user does not exist
     if not user:
-        raise_error("Not found")
+        raise_error("User not found")
 
     # If the user is disabled
     if user.disabled:
@@ -148,9 +136,7 @@ def check_subcscription(machine_id: str, session: SessionDep) -> str:
             user.jwt,
             settings.jwt_secret_key,
             algorithms=[settings.jwt_algorithm],
-            options={
-                "require": ["sub", "exp", "iat"]
-            }
+            options={"require": ["sub", "exp", "iat"]},
         )
 
         return user.machine_id

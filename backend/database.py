@@ -12,8 +12,9 @@ HOST = settings.postgres_host
 PORT = settings.postgres_port
 DBNAME = settings.postgres_dbname
 
-DATABASE_URL = (f"postgresql+psycopg2://{USER}:{PASSWORD}@{HOST}:{PORT}/{DBNAME}?sslmode"
-                f"=require")
+DATABASE_URL = (
+    f"postgresql+psycopg2://{USER}:{PASSWORD}@{HOST}:{PORT}/{DBNAME}?sslmode=require"
+)
 
 
 def get_session():
