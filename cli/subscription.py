@@ -1,7 +1,7 @@
 import httpx
 import machineid
 import typer
-from httpx import ConnectError
+from httpx import ConnectError, HTTPStatusError
 from rich.status import Status
 
 from common_functions import print_panel
@@ -21,6 +21,7 @@ def get_subscription_status() -> bool | None:
     Get the subscription status.
     :return: A boolean indicating if the subscription is active.
     """
+    # Get the machine id
     machine_id = get_device_id()
 
     try:
@@ -30,17 +31,27 @@ def get_subscription_status() -> bool | None:
             timeout=httpx.Timeout(70),
         )
 
-        if r.status_code >= 400:
+        # Raise an exception if the status code is 4xx or 5xx
+        r.raise_for_status()
+
+        if r.status_code == 200:
+            return True
+    except HTTPStatusError as e:
+        if e.response.status_code < 500:
             print_panel(
                 f"Your subscription is not active. Please contact support.",
                 title="No active subscription",
                 msg_type="warning",
             )
+        else:
+            print_panel(
+                f"An error occurred while checking the subscription status. Contact "
+                f"support",
+                title="Subscription error",
+                msg_type="warning",
+            )
 
-            return False
-
-        if r.status_code == 200:
-            return True
+        return False
     except ConnectError:
         print_panel(
             f"Could not connect to the server.",
