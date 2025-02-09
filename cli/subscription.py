@@ -39,14 +39,14 @@ def get_subscription_status() -> bool | None:
     except HTTPStatusError as e:
         if e.response.status_code < 500:
             print_panel(
-                f"Your subscription is not active. Please contact support.",
+                "Your subscription is not active. Please contact support.",
                 title="No active subscription",
                 msg_type="warning",
             )
         else:
             print_panel(
-                f"An error occurred while checking the subscription status. Contact "
-                f"support",
+                "An error occurred while checking the subscription status. Contact "
+                "support",
                 title="Subscription error",
                 msg_type="warning",
             )
@@ -54,7 +54,7 @@ def get_subscription_status() -> bool | None:
         return False
     except ConnectError:
         print_panel(
-            f"Could not connect to the server.",
+            "Could not connect to the server.",
             title="Connection error",
             msg_type="error",
         )

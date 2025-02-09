@@ -250,7 +250,7 @@ def publish(
 
                 if "| Facebook" not in page.title():
                     print_panel(
-                        f"Group {group_name} does not exist or is not " f"available",
+                        f"Group {group_name} does not exist or is not available",
                         msg_type="warning",
                     )
 
