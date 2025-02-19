@@ -2,7 +2,7 @@ from typing import Annotated
 
 from fastapi import Depends
 from sqlalchemy import NullPool
-from sqlmodel import create_engine, Session
+from sqlmodel import Session, create_engine
 
 from config import settings
 

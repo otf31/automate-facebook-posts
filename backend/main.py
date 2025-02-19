@@ -1,4 +1,4 @@
-from datetime import datetime, timezone, timedelta
+from datetime import datetime, timedelta, timezone
 
 import jwt
 from fastapi import FastAPI, HTTPException
@@ -64,10 +64,10 @@ def register_update(payload: UserCreateUpdate, session: SessionDep) -> User:
     """
     # Check if the user exists
     super_user = session.exec(
-        select(User).where(User.machine_id == payload.superadmin_machine_id)
+        select(User).where(User.machine_id == payload.superadmin_machine_id)  # noqa
     ).first()
     user = session.exec(
-        select(User).where(User.machine_id == payload.machine_id)
+        select(User).where(User.machine_id == payload.machine_id)  # noqa
     ).first()
 
     superadmin = authenticate_user(super_user)
@@ -117,7 +117,7 @@ def check_subcscription(machine_id: str, session: SessionDep) -> str | None:
     def raise_error(detail):
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=detail)
 
-    user = session.exec(select(User).where(User.machine_id == machine_id)).first()
+    user = session.exec(select(User).where(User.machine_id == machine_id)).first()  # noqa
 
     # If the user does not exist
     if not user:
