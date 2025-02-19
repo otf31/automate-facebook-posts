@@ -326,6 +326,9 @@ class Publish(Screen):
                     except IndexError as e:
                         log.write(StyledPanel(f"{e}", msg_type="warning"))
 
+                        # Advance progress bar
+                        progress_bar.advance(1)
+
                         continue
                     else:
                         group_info = f"{group_name} - {group_url}"
@@ -348,6 +351,9 @@ class Publish(Screen):
                                     msg_type="warning",
                                 )
                             )
+
+                            # Advance progress bar
+                            progress_bar.advance(1)
 
                             continue
 
@@ -381,6 +387,9 @@ class Publish(Screen):
                                         "Cannot find any way to post",
                                     )
                                 )
+
+                                # Advance progress bar
+                                progress_bar.advance(1)
 
                                 continue
 
@@ -477,7 +486,7 @@ class Publish(Screen):
                         groups_with_errors.append((group_name, group_url, str(e)))
                         await wait_random_seconds(5)
 
-                    # Update the progress bar
+                    # Advance progress bar
                     progress_bar.advance(1)
 
                 # The proccess has been completed
