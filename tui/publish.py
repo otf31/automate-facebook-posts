@@ -349,6 +349,9 @@ class Publish(Screen):
                                 )
                             )
 
+                            # Advance progress bar
+                            progress_bar.advance(1)
+
                             continue
 
                         write_something = page.get_by_role(
@@ -477,7 +480,7 @@ class Publish(Screen):
                         groups_with_errors.append((group_name, group_url, str(e)))
                         await wait_random_seconds(5)
 
-                    # Update the progress bar
+                    # Advance progress bar
                     progress_bar.advance(1)
 
                 # The proccess has been completed
