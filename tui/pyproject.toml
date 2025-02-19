@@ -11,7 +11,6 @@ dependencies = [
     "playwright>=1.50.0",
     "py-machineid>=0.7.0",
     "textual>=2.0.4",
-    "typer>=0.15.1",
 ]
 
 [dependency-groups]

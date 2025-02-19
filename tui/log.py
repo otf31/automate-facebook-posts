@@ -5,7 +5,7 @@ from fs.errors import FileExpected, ResourceNotFound
 from textual.app import ComposeResult
 from textual.containers import Center, Container
 from textual.screen import Screen
-from textual.widgets import Button, Label, DataTable
+from textual.widgets import Button, DataTable, Label
 
 from common_functions import get_configuration_value
 from constants import LOG_FILE

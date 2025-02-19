@@ -1,6 +1,5 @@
 import re
 
-import typer
 from playwright.async_api import Error, Page, expect
 
 from constants import FACEBOOK_URL
@@ -34,10 +33,3 @@ async def navigate(page: Page, url: str) -> None:
     :param url: The URL to navigate to.
     """
     await page.goto(url)
-
-
-def exit_app() -> None:
-    """
-    Exit the Typer application.
-    """
-    raise typer.Exit()

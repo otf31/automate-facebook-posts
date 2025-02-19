@@ -13,10 +13,10 @@ from playwright.async_api import Error, Page, async_playwright, expect
 from rich.pretty import Pretty
 from textual import on, work
 from textual.app import ComposeResult
-from textual.containers import Horizontal, Center
+from textual.containers import Center, Horizontal
 from textual.reactive import reactive
 from textual.screen import Screen
-from textual.widgets import Button, Label, RichLog, Select, ProgressBar
+from textual.widgets import Button, Label, ProgressBar, RichLog, Select
 
 from browser_utils import is_logged_in, navigate
 from common_functions import (
