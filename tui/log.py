@@ -42,6 +42,9 @@ class Logs(Screen):
         posts_folder_path = get_configuration_value("POSTS_FOLDER_PATH")
         data_table = self.query_one(DataTable)
 
+        # Clear data table, rows and columns
+        data_table.clear(columns=True)
+
         with open_fs(posts_folder_path) as posts_folder_fs:
             try:
                 with posts_folder_fs.open(LOG_FILE) as log_file:
