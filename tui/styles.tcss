@@ -1,0 +1,112 @@
+$accent: #926ee4;
+
+.header {
+    dock: top;
+    width: 100%;
+    content-align: center middle;
+    color: $accent;
+    height: 1;
+    margin: 0;
+    margin-bottom: 1;
+}
+
+.screen-intro {
+    width: 100%;
+    text-align: center;
+    padding: 0 2;
+}
+
+#buttons {
+    grid-size: 1;
+    grid-gutter: 1 2;
+    height: auto;
+    align-horizontal: center;
+}
+
+MachineId {
+    align: center middle;
+
+    Grid {
+        grid-size: 2;
+        grid-rows: 1fr auto;
+        grid-gutter: 1 2;
+        width: 60;
+        height: 12;
+        padding: 0 1;
+        border: thick $background 80%;
+        background: $surface;
+        align: center middle;
+
+        Label {
+            column-span: 2;
+            width: 100%;
+            content-align: center middle;
+        }
+
+        Button {
+            width: 100%;
+        }
+    }
+}
+
+Configuration {
+    padding: 1 2;
+
+    VerticalScroll {
+        align-horizontal: center;
+
+        Horizontal {
+            max-width: 90;
+            height: auto;
+            margin-bottom: 1;
+
+            & .label {
+                height: 100%;
+                width: 1fr;
+                content-align: center middle;
+                text-align: center;
+            }
+
+            & .input-container {
+                height: auto;
+                width: 3fr;
+                max-width: 50;
+            }
+        }
+    }
+
+    Center {
+        layout: horizontal;
+
+        Button {
+            margin-left: 1;
+        }
+    }
+}
+
+About {
+    align: center middle;
+
+    Grid {
+        grid-size: 1;
+        height: 12;
+        width: 60;
+        padding: 0 1;
+        align: center middle;
+        border: thick $background 80%;
+        background: $surface;
+    }
+
+    .label {
+        width: 100%;
+        content-align: center middle;
+    }
+
+    Center {
+        layout: horizontal;
+    }
+
+    Button {
+        width: 100%;
+    }
+}
