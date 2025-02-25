@@ -213,9 +213,7 @@ class Publish(Screen):
         if post == Select.BLANK:
             return
 
-        self.posts_folder_path = fs.path.abspath(
-            get_configuration_value("POSTS_FOLDER_PATH")
-        )
+        self.posts_folder_path = get_configuration_value("POSTS_FOLDER_PATH")
         self.post_path = fs.path.combine(self.posts_folder_path, post)
         self.images_folder_path = fs.path.combine(self.post_path, "images")
         self.descriptions_folder_path = fs.path.combine(self.post_path, "descriptions")
