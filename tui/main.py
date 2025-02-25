@@ -43,15 +43,15 @@ class Autofbpost(App[None]):
         ("c", "push_screen('configuration')", "Configuration"),
         ("a", "push_screen('about')", "About"),
     }
-    need_subscription_buttons = ["#publish-button", "#manual-mode-button"]
+    need_subscription_buttons = ["#publish", "#manual-mode"]
 
     def compose(self) -> ComposeResult:
         yield Label(f"Automate Facebook Posts v{__version__}", classes="header")
         yield Label(INTRO, classes="screen-intro")
         with Grid(id="buttons"):
-            yield Button("Publish", id="publish-button")
-            yield Button("Manual mode", id="manual-mode-button")
-            yield Button("Id", id="id-button")
+            yield Button("Publish", id="publish")
+            yield Button("Manual mode", id="manual-mode")
+            yield Button("Id", id="id")
             yield Button("Exit", variant="error", action="app.quit")
         yield Footer()
 
@@ -59,25 +59,23 @@ class Autofbpost(App[None]):
         for button_id in self.need_subscription_buttons:
             self.query_one(button_id).disabled = action == "disable"
 
-    @on(Button.Pressed, "#publish-button")
+    @on(Button.Pressed, "#publish")
     def show_publish_screen(self):
-        # publish_button = self.query_one("#publish-button")
-        #
-        # publish_button.loading = True
-        # self.set_buttons_state("disable")
-        # self.check_subscription(publish_button, Publish())
-        self.push_screen(Publish())
+        publish_button = self.query_one("#publish")
 
-    @on(Button.Pressed, "#manual-mode-button")
+        publish_button.loading = True
+        self.set_buttons_state("disable")
+        self.check_subscription(publish_button, Publish())
+
+    @on(Button.Pressed, "#manual-mode")
     def show_manual_mode_screen(self):
-        # manual_mode_button = self.query_one("#manual-mode-button")
-        #
-        # manual_mode_button.loading = True
-        # self.set_buttons_state("disable")
-        # self.check_subscription(manual_mode_button, ManualMode())
-        self.push_screen(ManualMode())
+        manual_mode_button = self.query_one("#manual-mode")
 
-    @on(Button.Pressed, "#id-button")
+        manual_mode_button.loading = True
+        self.set_buttons_state("disable")
+        self.check_subscription(manual_mode_button, ManualMode())
+
+    @on(Button.Pressed, "#id")
     def show_id_screen(self):
         self.push_screen(MachineId())
 
@@ -85,16 +83,16 @@ class Autofbpost(App[None]):
     async def check_subscription(self, button: Button, screen: Screen) -> None:
         has_subscribtion, msg = await get_subscription_status()
 
-        if has_subscribtion:
-            await self.push_screen(screen)
-        else:
-            self.notify(msg, severity="error")
-
         # Reset loading state
         button.loading = False
 
         # Restore buttons state
         self.set_buttons_state("enable")
+
+        if has_subscribtion:
+            await self.push_screen(screen)
+        else:
+            self.notify(msg, severity="error")
 
     def on_load(self):  # noqa
         # Write default configuration if there is no configuration file
