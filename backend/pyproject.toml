@@ -4,15 +4,15 @@ version = "0.1.0"
 description = "Automate facebook posts - API"
 requires-python = ">=3.12"
 dependencies = [
-    "fastapi[standard]>=0.115.8",
+    "fastapi[standard]>=0.115.10",
     "passlib>=1.7.4",
     "psycopg2-binary>=2.9.10",
-    "pydantic-settings>=2.7.1",
+    "pydantic-settings>=2.8.1",
     "pyjwt>=2.10.1",
-    "sqlmodel>=0.0.22",
+    "sqlmodel>=0.0.23",
 ]
 
 [dependency-groups]
 dev = [
-    "ruff>=0.9.7",
+    "ruff>=0.9.9",
 ]
