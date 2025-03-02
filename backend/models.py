@@ -11,3 +11,4 @@ class User(SQLModel, table=True):
     previous_jwt: str | None = Field(default=None)
     role: str | None = Field(default=None)
     disabled: bool | None = Field(default=False)
+    comment: str | None = Field(default=None)

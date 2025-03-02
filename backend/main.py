@@ -47,10 +47,11 @@ def create_access_token(data: dict, expires_delta: timedelta):
 class UserCreateUpdate(BaseModel):
     superadmin_machine_id: str
     machine_id: str
-    user_id: str
+    user_id: str | None = None
     days: int = 0
-    minutes: int = 0
-    seconds: int
+    hours: int = 0
+    minutes: int
+    comment: str | None = None
 
 
 @app.post("/register-update")
@@ -81,10 +82,7 @@ def register_update(payload: UserCreateUpdate, session: SessionDep) -> User:
 
     # If the user exists update the jwt, otherwise create a new user with the jwt
     if not user:
-        user = User(
-            machine_id=payload.machine_id,
-            user_id=payload.user_id,
-        )
+        user = User(machine_id=payload.machine_id)
 
     # Save the previous jwt token
     previous_jwt = user.jwt
@@ -96,12 +94,15 @@ def register_update(payload: UserCreateUpdate, session: SessionDep) -> User:
 
     # Create a new jwt token
     access_token_expires = timedelta(
-        days=payload.days, minutes=payload.minutes, seconds=payload.seconds
+        days=payload.days, hours=payload.hours, minutes=payload.minutes
     )
     access_token = create_access_token(
         data=jwt_payload, expires_delta=access_token_expires
     )
 
+    # Update the user object
+    user.user_id = payload.user_id
+    user.comment = payload.comment
     user.jwt = access_token
     user.previous_jwt = previous_jwt
 
