@@ -46,7 +46,11 @@ class Autofbpost(App[None]):
     need_subscription_buttons = ["#publish", "#manual-mode"]
 
     def compose(self) -> ComposeResult:
-        yield Label(f"Automate Facebook Posts v{__version__}", classes="header")
+        yield Label(
+            "[b cyan]Auto[/]mate [b cyan]F[/]ace[b cyan]b[/]ook [b cyan]Post[/]s"
+            f" v{__version__}",
+            classes="header",
+        )
         yield Label(INTRO, classes="screen-intro")
         with Grid(id="buttons"):
             yield Button("Publish", id="publish")

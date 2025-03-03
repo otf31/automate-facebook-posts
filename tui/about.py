@@ -10,7 +10,10 @@ from constants import EMAIL
 class About(ModalScreen):
     def compose(self) -> ComposeResult:
         with Grid():
-            yield Label("Automate Facebook Posts", classes="label")
+            yield Label(
+                "[b cyan]Auto[/]mate [b cyan]F[/]ace[b cyan]b[/]ook [b cyan]Post[/]s",
+                classes="label",
+            )
             yield Label(f"Version: {__version__}", classes="label")
             with Center():
                 yield Label("Developed by: ")

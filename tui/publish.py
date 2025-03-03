@@ -342,11 +342,11 @@ class Publish(Screen):
                         await sleep(2)
 
                         if "| Facebook" not in await page.title():
-                            log.write(
-                                StyledPanel(
-                                    f"Group {group_name} does not exist or is not "
-                                    f"available",
-                                    msg_type="warning",
+                            groups_with_errors.append(
+                                (
+                                    group_name,
+                                    group_url,
+                                    "Group does not exist or is not available",
                                 )
                             )
 
