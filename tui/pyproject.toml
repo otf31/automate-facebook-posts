@@ -15,6 +15,6 @@ dependencies = [
 
 [dependency-groups]
 dev = [
-    "ruff>=0.9.9",
+    "ruff>=0.9.10",
     "textual-dev>=1.7.0",
 ]
