@@ -1,0 +1,14 @@
+language = "Español"
+
+[login]
+groups_page_title = '.*Grupos \| Facebook'
+
+[publish]
+button_write_something = "Escribe algo.*"
+button_start_discussion = "Iniciar conversación.*"
+tab_discussion = "Conversación.*"
+loader_posting = "Publicando.*"
+button_post = "Publicar"
+textarea_create_post = "Crea una publicación pública.*"
+textarea_write_something = "Escribe algo.*"
+button_photo_video = "Foto/video"

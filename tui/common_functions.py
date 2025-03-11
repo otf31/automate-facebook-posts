@@ -4,6 +4,8 @@ from asyncio import sleep
 from json import JSONDecodeError
 from typing import Any, Callable, Literal
 
+import rtoml
+from fs import open_fs
 from fs.appfs import UserConfigFS
 from rich.console import group
 from rich.panel import Panel
@@ -141,3 +143,14 @@ def get_configuration_value(key: CONFIG_KEYS_TYPES) -> str | bool | None:
     config = load_configuration()
 
     return config[key]
+
+
+def get_locales_fb_strings(lang: str) -> dict[str, dict[str, str] | str]:
+    """
+    Get the Facebook strings for a specific language.
+    :param lang: The language code.
+    :return: The Facebook strings depending on the language.
+    """
+    with open_fs("./locales_fb") as fs:
+        with fs.open(f"{lang}.toml") as file:
+            return rtoml.load(file)

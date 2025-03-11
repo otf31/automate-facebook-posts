@@ -18,13 +18,15 @@ from textual.reactive import reactive
 from textual.screen import Screen
 from textual.widgets import Button, Label, ProgressBar, RichLog, Select
 
-from browser_utils import is_logged_in, navigate
+from browser_utils import is_logged_in, navigate, get_fb_lang
 from common_functions import (
     StyledPanel,
     get_configuration_value,
     panels_group,
     wait_random_seconds,
+    get_locales_fb_strings,
 )
+from constants import SUPPORTED_FB_LANGUAGES
 
 
 def pick_random_description(descriptions: list[str]) -> str:
@@ -307,7 +309,30 @@ class Publish(Screen):
                 )
                 page: Page = browser.pages[0]
 
-                if not await is_logged_in(page):
+                # Get user facebook interface language
+                lang = await get_fb_lang(page)
+
+                await sleep(2)
+
+                if not lang:
+                    self.app.pop_screen()  # noqa
+
+                    self.notify(
+                        f"Unsupported Facebook language."
+                        "Please switch to one of these languages: "
+                        f"{', '.join(SUPPORTED_FB_LANGUAGES.values())}."
+                        " Then try again.",
+                        severity="error",
+                        timeout=10,
+                    )
+
+                fb_locale_strs = get_locales_fb_strings(lang)
+
+                log.write(StyledPanel(fb_locale_strs["language"], title="Facebook user language"))
+
+                if not await is_logged_in(
+                    page, fb_locale_strs["login"]["groups_page_title"]
+                ):
                     self.app.pop_screen()  # noqa
 
                     self.notify(
@@ -356,10 +381,16 @@ class Publish(Screen):
                             continue
 
                         write_something = page.get_by_role(
-                            "button", name=re.compile("Write something.*")
+                            "button",
+                            name=re.compile(
+                                fb_locale_strs["publish"]["button_write_something"]
+                            ),
                         )
                         start_discussion = page.get_by_role(
-                            "button", name=re.compile("Start discussion.*")
+                            "button",
+                            name=re.compile(
+                                fb_locale_strs["publish"]["button_start_discussion"]
+                            ),
                         )
 
                         try:
@@ -368,7 +399,10 @@ class Publish(Screen):
                             ).to_be_visible(timeout=3000)
                         except AssertionError:
                             await page.get_by_role(
-                                "tab", name=re.compile("Discussion.*")
+                                "tab",
+                                name=re.compile(
+                                    fb_locale_strs["publish"]["tab_discussion"]
+                                ),
                             ).click(force=True, timeout=5000)
 
                             await sleep(2)
@@ -397,21 +431,29 @@ class Publish(Screen):
                             await start_discussion.click(force=True)
 
                         # Posting loading
-                        posting_el = page.get_by_text(re.compile("Posting.*"))
+                        posting_el = page.get_by_text(
+                            re.compile(fb_locale_strs["publish"]["loader_posting"])
+                        )
 
-                        # Post button
                         post_button = page.get_by_role(
-                            "button", name="Post", exact=True
+                            "button",
+                            name=fb_locale_strs["publish"]["button_post"],
+                            exact=True,
                         )
 
                         # Wait for the post button to be visible
                         await post_button.wait_for(timeout=6000)
 
+                        # Textarea elements
                         textarea_create_public_post = page.get_by_label(
-                            re.compile("Create a public post.*")
+                            re.compile(
+                                fb_locale_strs["publish"]["textarea_create_post"]
+                            )
                         )
                         textarea_write_something = page.get_by_label(
-                            re.compile("Write something.*")
+                            re.compile(
+                                fb_locale_strs["publish"]["textarea_write_something"]
+                            )
                         )
 
                         # Expect the textarea to be visible
@@ -438,7 +480,9 @@ class Publish(Screen):
                         except AssertionError:
                             # If the file_input is not present, then click the
                             # Photo/video button
-                            photo_video = page.get_by_label("Photo/video")
+                            photo_video = page.get_by_label(
+                                fb_locale_strs["publish"]["button_photo_video"]
+                            )
 
                             await photo_video.click(force=True)
                             await expect(file_input).to_be_attached()
