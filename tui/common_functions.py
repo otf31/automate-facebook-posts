@@ -4,6 +4,7 @@ from asyncio import sleep
 from json import JSONDecodeError
 from typing import Any, Callable, Literal
 
+import fs.path
 import rtoml
 from fs import open_fs
 from fs.appfs import UserConfigFS
@@ -49,14 +50,14 @@ T = TypeVar("T")
 # def print_panels_group[T]( -> doesn't work in executable file
 def panels_group(
     iterable: list[T],
-    extract_msg_callback: Callable[[T], str],
+    extract_msg: Callable[[T], str],
     title: str = None,
     children_msg_type: Literal["info", "warning", "success"] = "info",
 ) -> Panel:
     """
     Print a group of panels.
     :param iterable: The list of items to iterate.
-    :param extract_msg_callback: A callable that extracts the message from the item.
+    :param extract_msg: A callable that extracts the message from the item.
     :param title: The title of the main panel.
     :param children_msg_type: The type of the children panels. Default is info.
     """
@@ -64,7 +65,7 @@ def panels_group(
     @group()
     def get_panels():
         for i in iterable:
-            msg = extract_msg_callback(i)
+            msg = extract_msg(i)
 
             yield StyledPanel(str(msg), msg_type=children_msg_type)
 
@@ -151,6 +152,16 @@ def get_locales_fb_strings(lang: str) -> dict[str, dict[str, str] | str]:
     :param lang: The language code.
     :return: The Facebook strings depending on the language.
     """
-    with open_fs("./locales_fb") as fs:
-        with fs.open(f"{lang}.toml") as file:
-            return rtoml.load(file)
+    locales_fb_path = fs.path.join(get_executable_dir_location(), "locales_fb")
+
+    with open_fs(locales_fb_path) as locales_fb:
+        with locales_fb.open(f"{lang}.toml") as locale_file:
+            return rtoml.load(locale_file)
+
+
+def get_executable_dir_location() -> str:
+    """
+    Get the executable location.
+    :return: The executable location.
+    """
+    return fs.path.dirname(__file__)

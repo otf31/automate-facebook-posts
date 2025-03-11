@@ -312,8 +312,6 @@ class Publish(Screen):
                 # Get user facebook interface language
                 lang = await get_fb_lang(page)
 
-                await sleep(2)
-
                 if not lang:
                     self.app.pop_screen()  # noqa
 
@@ -328,7 +326,11 @@ class Publish(Screen):
 
                 fb_locale_strs = get_locales_fb_strings(lang)
 
-                log.write(StyledPanel(fb_locale_strs["language"], title="Facebook user language"))
+                log.write(
+                    StyledPanel(
+                        fb_locale_strs["language"], title="Facebook user language"
+                    )
+                )
 
                 if not await is_logged_in(
                     page, fb_locale_strs["login"]["groups_page_title"]
@@ -553,7 +555,7 @@ class Publish(Screen):
                     log.write(
                         panels_group(
                             groups_with_errors,
-                            extract_msg_callback=lambda x: f"{x[0]} - {x[1]} - {x[2]}",
+                            extract_msg=lambda x: f"{x[0]} - {x[1]} - {x[2]}",
                             title=f"Groups with errors ({num_failed})",
                             children_msg_type="warning",
                         )
