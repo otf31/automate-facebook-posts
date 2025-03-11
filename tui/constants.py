@@ -21,3 +21,4 @@ DEFAULT_CONFIG = {
     "POSTS_FOLDER_PATH": "",
     "HEADLESS": False,
 }
+SUPPORTED_FB_LANGUAGES = {"en": "English", "es": "Español"}
