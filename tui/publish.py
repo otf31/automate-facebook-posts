@@ -1,6 +1,7 @@
 import csv
 import random
 import re
+import secrets
 from asyncio import sleep
 from datetime import datetime
 from typing import Literal
@@ -60,12 +61,12 @@ def read_groups(
     groups_file_path: str, publication_filters: list[str]
 ) -> list[list[str]]:
     """
-    Read groups from a CSV file.
+    Read groups from a CSV file and randomize them.
     :param groups_file_path: The groups file path.
     :param publication_filters: The filters to match the groups.
     :return: A list of filtered groups according to publication_filters.
     """
-
+    system_random = secrets.SystemRandom()
     groups = []
     head, tail = fs.path.split(groups_file_path)
 
@@ -83,6 +84,9 @@ def read_groups(
 
         if len(set(publication_filters).intersection(set(group_filters))) > 0:
             groups.append(row)
+
+    # Randomize the groups
+    system_random.shuffle(groups)
 
     return groups
 
@@ -515,12 +519,12 @@ class Publish(Screen):
 
                         # Do not wait if the last group is reached
                         if index < num_groups - 1:
-                            # Wait a random time between 90 seconds and 130 seconds
+                            # Wait a random time between 123 seconds and 151 seconds
                             if (index + 1) % 5 == 0:
-                                await wait_random_seconds(90, 130)
-                            # Wait a random time between 45 seconds and 65 seconds
+                                await wait_random_seconds(123, 151)
+                            # Wait a random time between 61 seconds and 87 seconds
                             else:
-                                await wait_random_seconds(45, 65)
+                                await wait_random_seconds(61, 87)
                     # Playwright Error
                     except Error as e:
                         groups_with_errors.append((group_name, group_url, e.message))

@@ -17,12 +17,9 @@ from manual_mode import ManualMode
 from publish import Publish
 from subscription import get_subscription_status
 
-INTRO = """
-Streamline your group engagement with our automation tool. 
-[bold]Publish to multiple Facebook groups in just a few clicks[/], no more manual posting!
-Perfect for admins and members looking to save time and stay active.
-Simplify your group management today!
-"""
+INTRO = """Our automation tool makes group engagement effortless. [bold]Post to multiple 
+Facebook groups with just a few clicks[/], eliminating manual work. Ideal for admins and 
+members aiming to save time and maintain activity."""
 
 
 class Autofbpost(App[None]):
@@ -43,7 +40,6 @@ class Autofbpost(App[None]):
         ("c", "push_screen('configuration')", "Configuration"),
         ("a", "push_screen('about')", "About"),
     }
-    need_subscription_buttons = ["#publish", "#manual-mode"]
 
     def compose(self) -> ComposeResult:
         yield Label(
@@ -60,7 +56,7 @@ class Autofbpost(App[None]):
         yield Footer()
 
     def set_buttons_state(self, action: Literal["enable", "disable"]):
-        for button_id in self.need_subscription_buttons:
+        for button_id in ["#publish", "#manual-mode"]:
             self.query_one(button_id).disabled = action == "disable"
 
     @on(Button.Pressed, "#publish")
@@ -73,11 +69,7 @@ class Autofbpost(App[None]):
 
     @on(Button.Pressed, "#manual-mode")
     def show_manual_mode_screen(self):
-        manual_mode_button = self.query_one("#manual-mode")
-
-        manual_mode_button.loading = True
-        self.set_buttons_state("disable")
-        self.check_subscription(manual_mode_button, ManualMode())
+        self.push_screen(ManualMode())
 
     @on(Button.Pressed, "#id")
     def show_id_screen(self):

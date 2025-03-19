@@ -1,5 +1,5 @@
 import json
-import random
+import secrets
 from asyncio import sleep
 from json import JSONDecodeError
 from typing import Any, Callable, Literal
@@ -82,7 +82,7 @@ async def wait_random_seconds(start: int, end: int = None) -> None:
     if end is None:
         end = start
 
-    await sleep(random.randint(start, end))
+    await sleep(secrets.randbelow(end - start + 1) + start)
 
 
 def validate_conf_file():

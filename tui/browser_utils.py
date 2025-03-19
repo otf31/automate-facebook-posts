@@ -34,11 +34,11 @@ async def get_fb_lang(page: Page) -> str | bool:
         await navigate(page, FACEBOOK_URL + "/groups/feed/")
 
         lang = await page.locator("html").get_attribute("lang")
-
-        if lang in SUPPORTED_FB_LANGUAGES:
-            return lang
     except Error:
         return False
+    else:
+        if lang in SUPPORTED_FB_LANGUAGES:
+            return lang
 
     return False
 

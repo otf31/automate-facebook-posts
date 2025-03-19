@@ -13,7 +13,7 @@ $accent: #926ee4;
 .screen-intro {
     width: 100%;
     text-align: center;
-    padding: 0 2;
+    padding: 1 2;
 }
 
 #buttons {
