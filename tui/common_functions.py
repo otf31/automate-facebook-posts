@@ -2,6 +2,7 @@ import json
 import secrets
 from asyncio import sleep
 from json import JSONDecodeError
+from pathlib import Path
 from typing import Any, Callable, Literal
 
 import fs.path
@@ -164,4 +165,4 @@ def get_executable_dir_location() -> str:
     Get the executable location.
     :return: The executable location.
     """
-    return fs.path.dirname(__file__)
+    return str(Path(__file__).resolve().parent)
