@@ -1,7 +1,12 @@
 name: Release
 
 on:
-  workflow_dispatch
+  workflow_dispatch:
+    inputs:
+      release_version:
+        description: "Release version"
+        required: true
+        default: "x.x.x"
 
 env:
   APP_DIR: tui
@@ -11,7 +16,6 @@ permissions:
 
 jobs:
   build:
-
     runs-on: ubuntu-latest
 
     steps:
@@ -30,12 +34,14 @@ jobs:
   
       - name: Build executable with Nuitka
         run: |
-          uv run nuitka --onefile --include-data-files=styles.tcss=styles.tcss --include-data-dir=locales_fb=locales_fb --playwright-include-browser=none --output-filename=autofbpost main.py
+          uv run nuitka --assume-yes-for-downloads --onefile --include-data-files=styles.tcss=styles.tcss --include-data-dir=locales_fb=locales_fb --playwright-include-browser=none --output-filename=autofbpost main.py
         working-directory: ${{ env.APP_DIR }}
   
       - name: Upload Release Assets
         uses: softprops/action-gh-release@v2
         with:
+          tag_name: ${{ github.event.inputs.release_version }}
+          body: "Latest version"
           files: tui/autofbpost.bin
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
