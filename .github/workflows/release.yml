@@ -1,0 +1,41 @@
+name: Release
+
+on:
+  workflow_dispatch
+
+env:
+  APP_DIR: tui
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Python 3.13
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+          
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pipx install uv
+          uv sync
+        working-directory: ${{ env.APP_DIR }}
+  
+      - name: Build executable with Nuitka
+        run: |
+          uv run nuitka --onefile --include-data-files=styles.tcss=styles.tcss --include-data-dir=locales_fb=locales_fb --playwright-include-browser=none --output-filename=autofbpost main.py
+        working-directory: ${{ env.APP_DIR }}
+  
+      - name: Upload Release Assets
+        uses: softprops/action-gh-release@v2
+        with:
+          files: tui/autofbpost.bin
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
