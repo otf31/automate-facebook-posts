@@ -329,6 +329,7 @@ class Publish(Screen):
                     )
 
                 fb_locale_strs = get_locales_fb_strings(lang)
+                publish_strs = fb_locale_strs["publish"]
 
                 log.write(
                     StyledPanel(
@@ -388,15 +389,11 @@ class Publish(Screen):
 
                         write_something = page.get_by_role(
                             "button",
-                            name=re.compile(
-                                fb_locale_strs["publish"]["button_write_something"]
-                            ),
+                            name=re.compile(publish_strs["button_write_something"]),
                         )
                         start_discussion = page.get_by_role(
                             "button",
-                            name=re.compile(
-                                fb_locale_strs["publish"]["button_start_discussion"]
-                            ),
+                            name=re.compile(publish_strs["button_start_discussion"]),
                         )
 
                         try:
@@ -406,9 +403,7 @@ class Publish(Screen):
                         except AssertionError:
                             await page.get_by_role(
                                 "tab",
-                                name=re.compile(
-                                    fb_locale_strs["publish"]["tab_discussion"]
-                                ),
+                                name=re.compile(publish_strs["tab_discussion"]),
                             ).click(force=True, timeout=5000)
 
                             await sleep(2)
@@ -438,42 +433,35 @@ class Publish(Screen):
 
                         # Posting loading
                         posting_el = page.get_by_text(
-                            re.compile(fb_locale_strs["publish"]["loader_posting"])
+                            re.compile(publish_strs["loader_posting"])
                         )
 
                         post_button = page.get_by_role(
-                            "button",
-                            name=fb_locale_strs["publish"]["button_post"],
-                            exact=True,
+                            "button", name=publish_strs["button_post"], exact=True
                         )
 
                         # Wait for the post button to be visible
                         await post_button.wait_for(timeout=6000)
 
                         # Textarea elements
-                        textarea_create_public_post = page.get_by_label(
-                            re.compile(
-                                fb_locale_strs["publish"]["textarea_create_post"]
-                            )
+                        textarea_create_post = page.locator(
+                            '[aria-placeholder*="'
+                            f'{publish_strs["textarea_create_post"]}"]'
                         )
-                        textarea_write_something = page.get_by_label(
-                            re.compile(
-                                fb_locale_strs["publish"]["textarea_write_something"]
-                            )
+                        textarea_write_something = page.locator(
+                            '[aria-placeholder*="'
+                            f'{publish_strs["textarea_write_something"]}"]'
                         )
 
+                        textarea = textarea_create_post.or_(textarea_write_something)
+
                         # Expect the textarea to be visible
-                        await expect(
-                            textarea_create_public_post.or_(textarea_write_something)
-                        ).to_be_visible()
+                        await expect(textarea).to_be_visible()
 
                         description = pick_random_description(descriptions)
 
                         # Fill the description
-                        if await textarea_write_something.is_visible():
-                            await textarea_write_something.fill(description)
-                        elif await textarea_create_public_post.is_visible():
-                            await textarea_create_public_post.fill(description)
+                        await textarea.fill(description)
 
                         # Get the file input element
                         file_input = page.locator(
@@ -487,7 +475,7 @@ class Publish(Screen):
                             # If the file_input is not present, then click the
                             # Photo/video button
                             photo_video = page.get_by_label(
-                                fb_locale_strs["publish"]["button_photo_video"]
+                                publish_strs["button_photo_video"]
                             )
 
                             await photo_video.click(force=True)
