@@ -13,7 +13,7 @@ from rich.console import group
 from rich.panel import Panel
 from typing_extensions import TypeVar
 
-from constants import APP_NAME, CONFIG_FILE, CONFIG_KEYS_TYPES, DEFAULT_CONFIG
+from constants import APP_NAME, CONFIG_FILE_PATH, CONFIG_KEYS_TYPES, DEFAULT_CONFIG
 
 
 class StyledPanel(Panel):
@@ -93,7 +93,7 @@ def validate_conf_file():
     it will be overwritten with the default configuration.
     """
     with UserConfigFS(APP_NAME) as user_config_fs:
-        exists = user_config_fs.exists(CONFIG_FILE)
+        exists = user_config_fs.exists(CONFIG_FILE_PATH)
 
         # Create if it does not exist
         if not exists:
@@ -101,7 +101,7 @@ def validate_conf_file():
         else:
             # Check if the configuration file has valid keys
             try:
-                with user_config_fs.open(CONFIG_FILE) as config_file:
+                with user_config_fs.open(CONFIG_FILE_PATH) as config_file:
                     config = json.load(config_file)
             except JSONDecodeError:
                 write_conf_file(DEFAULT_CONFIG)
@@ -120,7 +120,7 @@ def load_configuration() -> dict[CONFIG_KEYS_TYPES, str | bool]:
     validate_conf_file()
 
     with UserConfigFS(APP_NAME) as user_config_fs:
-        with user_config_fs.open(CONFIG_FILE) as config_file:
+        with user_config_fs.open(CONFIG_FILE_PATH) as config_file:
             config = json.load(config_file)
 
     return config
@@ -132,7 +132,7 @@ def write_conf_file(config: dict[str, str | bool]) -> None:
     :param config: The configuration dictionary.
     """
     with UserConfigFS(APP_NAME) as user_config_fs:
-        with user_config_fs.open(CONFIG_FILE, "w") as config_file:
+        with user_config_fs.open(CONFIG_FILE_PATH, "w") as config_file:
             json.dump(config, config_file, indent=4)  # type: ignore
 
 

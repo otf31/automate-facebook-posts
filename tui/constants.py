@@ -13,8 +13,8 @@ CHROME_BINARY_PATH = (
     else "/opt/google/chrome/google-chrome"
 )
 APP_NAME = "autofbpost"
-CONFIG_FILE = "config.json"
-LOG_FILE = "log.csv"
+CONFIG_FILE_PATH = "config.json"
+HiSTORY_FILE_PATH = "log.csv"
 CONFIG_KEYS_TYPES = Literal["CHROME_BINARY_PATH", "POSTS_FOLDER_PATH", "HEADLESS"]
 DEFAULT_CONFIG = {
     "CHROME_BINARY_PATH": CHROME_BINARY_PATH,

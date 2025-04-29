@@ -554,17 +554,19 @@ class Publish(Screen):
                     )
 
                 with open_fs(posts_folder_path) as posts_folder_fs:
-                    logs_file_name = "log.csv"
-                    file_exists = posts_folder_fs.exists(logs_file_name)
+                    history_file_path = "log.csv"
+                    file_exists = posts_folder_fs.exists(history_file_path)
 
                     if not file_exists:
-                        with posts_folder_fs.open(logs_file_name, "w") as log_file:
-                            writer = csv.writer(log_file, delimiter=";")
+                        with posts_folder_fs.open(
+                            history_file_path, "w"
+                        ) as history_file:
+                            writer = csv.writer(history_file, delimiter=";")
 
                             writer.writerow(headers)
 
-                    with posts_folder_fs.open(logs_file_name, "a") as log_file:
-                        writer = csv.writer(log_file, delimiter=";")
+                    with posts_folder_fs.open(history_file_path, "a") as history_file:
+                        writer = csv.writer(history_file, delimiter=";")
 
                         writer.writerow(line)
 

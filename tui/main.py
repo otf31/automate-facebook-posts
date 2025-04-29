@@ -11,7 +11,7 @@ from _version import __version__
 from about import About
 from common_functions import validate_conf_file
 from configuration import Configuration
-from log import Logs
+from history import History
 from machine_id import MachineId
 from manual_mode import ManualMode
 from publish import Publish
@@ -31,12 +31,12 @@ class Autofbpost(App[None]):
         "manual-mode": ManualMode,
         "machine-id": MachineId,
         "configuration": Configuration,
-        "logs": Logs,
+        "history": History,
         "about": About,
     }
     BINDINGS = {
         Binding("ctrl+q", "", "Quit", show=False),
-        ("l", "push_screen('logs')", "Logs"),
+        ("h", "push_screen('history')", "History"),
         ("c", "push_screen('configuration')", "Configuration"),
         ("a", "push_screen('about')", "About"),
     }

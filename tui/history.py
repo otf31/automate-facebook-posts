@@ -8,12 +8,12 @@ from textual.screen import Screen
 from textual.widgets import Button, DataTable, Label
 
 from common_functions import get_configuration_value
-from constants import LOG_FILE
+from constants import HiSTORY_FILE_PATH
 
 
-class Logs(Screen):
+class History(Screen):
     DEFAULT_CSS = """
-    Logs {
+    History {
         padding: 1 2;
 
         Container {
@@ -32,7 +32,7 @@ class Logs(Screen):
     """
 
     def compose(self) -> ComposeResult:
-        yield Label("Logs", classes="header")
+        yield Label("History", classes="header")
         with Container():
             yield DataTable()
         with Center():
@@ -47,15 +47,15 @@ class Logs(Screen):
 
         with open_fs(posts_folder_path) as posts_folder_fs:
             try:
-                with posts_folder_fs.open(LOG_FILE) as log_file:
-                    reader = csv.reader(log_file, delimiter=";")
+                with posts_folder_fs.open(HiSTORY_FILE_PATH) as history_file:
+                    reader = csv.reader(history_file, delimiter=";")
 
                     data_table.add_columns(*next(reader))
 
                     for row in reader:
                         data_table.add_row(*row)
             except (ResourceNotFound, FileExpected):
-                self.app.notify("No logs file found", severity="warning")
+                self.app.notify("No history file found", severity="warning")
                 self.app.pop_screen()
 
     def on_screen_resume(self):
