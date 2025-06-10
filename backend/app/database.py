@@ -4,17 +4,21 @@ from fastapi import Depends
 from sqlalchemy import NullPool
 from sqlmodel import Session, create_engine
 
-from config import settings
+from .config import settings
 
 USER = settings.postgres_user
 PASSWORD = settings.postgres_password
 HOST = settings.postgres_host
 PORT = settings.postgres_port
-DBNAME = settings.postgres_dbname
+DB = settings.postgres_dbname
 
-DATABASE_URL = (
-    f"postgresql+psycopg2://{USER}:{PASSWORD}@{HOST}:{PORT}/{DBNAME}?sslmode=require"
-)
+
+if (APP_MODE := settings.app_mode) == "development":
+    DATABASE_URL = f"postgresql+psycopg2://{USER}:{PASSWORD}@{HOST}:{PORT}/{DB}"
+else:
+    DATABASE_URL = (
+        f"postgresql+psycopg2://{USER}:{PASSWORD}@{HOST}:{PORT}/{DB}?sslmode=require"
+    )
 
 
 def get_session():

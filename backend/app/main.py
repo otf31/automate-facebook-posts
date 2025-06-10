@@ -1,3 +1,4 @@
+from contextlib import asynccontextmanager
 from datetime import datetime, timedelta, timezone
 
 import jwt
@@ -8,23 +9,32 @@ from pydantic import BaseModel
 from sqlmodel import select
 from starlette import status
 
-from config import settings
-from database import SessionDep
-from models import User
+from .config import settings
+from .database import SessionDep
+from .models import RoleEnum, User
+from .startup import create_super_admin_user
 
-app_mode = settings.app_mode
 
-if app_mode == "production":
-    app = FastAPI(docs_url=None, redoc_url=None, openapi_url=None)
+@asynccontextmanager
+async def lifespan(app: FastAPI):  # noqa
+    # This function will be called when the app starts up
+    # Create admin user if it doesn't exist
+    create_super_admin_user()
+
+    yield
+
+
+if settings.app_mode == "production":
+    app = FastAPI(docs_url=None, redoc_url=None, openapi_url=None, lifespan=lifespan)
 else:
-    app = FastAPI()
+    app = FastAPI(lifespan=lifespan)
 
 
-def authenticate_user(user: User):
+def authenticate_super_admin(user: User):
     if not user:
         return False
 
-    if user.role != "super_admin":
+    if user.role != RoleEnum.super_admin:
         return False
 
     return user
@@ -47,7 +57,7 @@ def create_access_token(data: dict, expires_delta: timedelta):
 class UserCreateUpdate(BaseModel):
     superadmin_machine_id: str
     machine_id: str
-    user_id: str | None = None
+    user_id: str
     days: int = 0
     hours: int = 0
     minutes: int
@@ -64,31 +74,31 @@ def register_update(payload: UserCreateUpdate, session: SessionDep) -> User:
     :return: A user object or an HTTPException
     """
     # Check if the user exists
-    super_user = session.exec(
+    super_admin = session.exec(
         select(User).where(User.machine_id == payload.superadmin_machine_id)  # noqa
     ).first()
     user = session.exec(
         select(User).where(User.machine_id == payload.machine_id)  # noqa
     ).first()
 
-    superadmin = authenticate_user(super_user)
-
-    if not superadmin:
+    if not (authenticate_super_admin(super_admin)):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="только для Денис",
             headers={"WWW-Authenticate": "Bearer"},
         )
 
-    # If the user exists update the jwt, otherwise create a new user with the jwt
+    # If the user exists then update the jwt, otherwise create a new user with the jwt
     if not user:
-        user = User(machine_id=payload.machine_id)
+        user = User(user_id=payload.user_id, machine_id=payload.machine_id)
 
     # Save the previous jwt token
     previous_jwt = user.jwt
 
     jwt_payload = {
-        "sub": user.machine_id,
+        "sub": str(user.id),
+        "user_id": user.user_id,
+        "machine_id": user.machine_id,
         "iat": datetime.now(timezone.utc),
     }
 
@@ -101,7 +111,6 @@ def register_update(payload: UserCreateUpdate, session: SessionDep) -> User:
     )
 
     # Update the user object
-    user.user_id = payload.user_id
     user.comment = payload.comment
     user.jwt = access_token
     user.previous_jwt = previous_jwt
@@ -114,23 +123,23 @@ def register_update(payload: UserCreateUpdate, session: SessionDep) -> User:
 
 
 @app.get("/check-subscription")
-def check_subcscription(machine_id: str, session: SessionDep) -> str | None:
+def check_subscription(machine_id: str, session: SessionDep) -> str | None:
     def raise_error(detail):
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=detail)
 
-    user = session.exec(select(User).where(User.machine_id == machine_id)).first()  # noqa
-
     # If the user does not exist
-    if not user:
-        raise_error("User not found")
+    if not (
+        user := session.exec(select(User).where(User.machine_id == machine_id)).first()  # noqa
+    ):
+        raise_error("User not found.")
 
     # If the user is disabled
-    if user.disabled:
-        raise_error("Disabled")
+    if user.is_disabled:
+        raise_error("Disabled.")
 
     # If the user does not have a jwt token
     if not user.jwt:
-        raise_error("No subscription")
+        raise_error("No subscription.")
 
     try:
         jwt.decode(
@@ -147,6 +156,6 @@ def check_subcscription(machine_id: str, session: SessionDep) -> str | None:
         raise_error("Could not validate credentials")
 
 
-@app.get("/status")
+@app.get("/health")
 def get_status():
     return {"status": "ok"}
