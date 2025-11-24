@@ -1,5 +1,4 @@
 import csv
-import random
 import re
 import secrets
 from asyncio import sleep
@@ -14,20 +13,20 @@ from playwright.async_api import Error, Page, async_playwright, expect
 from rich.pretty import Pretty
 from textual import on, work
 from textual.app import ComposeResult
-from textual.containers import Center, Horizontal
+from textual.containers import Center, Horizontal, VerticalGroup
 from textual.reactive import reactive
 from textual.screen import Screen
 from textual.widgets import Button, Label, ProgressBar, RichLog, Select
 
-from browser_utils import is_logged_in, navigate, get_fb_lang
+from browser_utils import get_fb_lang, is_logged_in, navigate
 from common_functions import (
     StyledPanel,
     get_configuration_value,
+    get_locales_fb_strings,
     panels_group,
     wait_random_seconds,
-    get_locales_fb_strings,
 )
-from constants import SUPPORTED_FB_LANGUAGES
+from constants import SUPPORTED_FB_LANGUAGES, HiSTORY_FILE_PATH
 
 
 def pick_random_description(descriptions: list[str]) -> str:
@@ -36,7 +35,7 @@ def pick_random_description(descriptions: list[str]) -> str:
     :param descriptions: A list containing the descriptions.
     :return: A single random description.
     """
-    description: str = random.choice(descriptions)
+    description: str = secrets.choice(descriptions)
 
     return description
 
@@ -48,10 +47,10 @@ def read_filters(filters_file_path: str) -> list[str]:
     :param filters_file_path: The filters file path.
     :return: A list of filters.
     """
-    parent = fs.path.dirname(filters_file_path)
+    folder, file = fs.path.split(filters_file_path)
 
-    with open_fs(parent) as parent_fs:
-        with parent_fs.open(fs.path.basename(filters_file_path)) as filters_file:
+    with open_fs(folder) as dir_fs:
+        with dir_fs.open(file) as filters_file:
             text = filters_file.read()
 
     return [f.strip().lower() for f in text.split(",")]
@@ -68,10 +67,10 @@ def read_groups(
     """
     system_random = secrets.SystemRandom()
     groups = []
-    head, tail = fs.path.split(groups_file_path)
+    folder, resource = fs.path.split(groups_file_path)
 
-    with open_fs(head) as parent_fs:
-        with parent_fs.open(tail) as groups_file:
+    with open_fs(folder) as dir_fs:
+        with dir_fs.open(resource) as groups_file:
             reader = csv.reader(groups_file, delimiter=";")
 
             # Skip the header
@@ -97,7 +96,7 @@ def get_descriptions(descriptions_folder_path: str) -> list[str]:
     :param descriptions_folder_path: The descriptions folder path.
     :return: A list containing the descriptions as strings and stripped.
     """
-    descriptions = []
+    descriptions: list[str] = []
 
     with open_fs(descriptions_folder_path) as descriptions_fs:
         d = descriptions_fs.filterdir("/", files=["*.txt"], exclude_dirs=["*"])
@@ -177,24 +176,34 @@ class Publish(Screen):
         &.started ProgressBar {
             display: block;
         }
+        
+        #extra-info {
+            display: none;
+        }
     }
     """
 
     available_posts: reactive[list[tuple[str, str]]] = reactive(list, recompose=True)
+    started: reactive[bool] = reactive(False, toggle_class="started")
 
     def __init__(self):
         super().__init__()
-        self.posts_folder_path = None
-        self.post_path = None
-        self.images_folder_path = None
-        self.descriptions_folder_path = None
-        self.filters_file_path = None
-        self.groups_file_path = None
+        self.posts_folder_path: str = get_configuration_value("POSTS_FOLDER_PATH")
+        self.post_path: str | None = None
+        self.images_folder_path: str | None = None
+        self.descriptions_folder_path: str | None = None
+        self.filters_file_path: str | None = None
+        self.groups_file_path: str | None = None
+        self.publication_filters: list[str] | None = None
+        self.groups: list[list[str]] | None = None
+        self.num_groups: int | None = None
 
     def compose(self) -> ComposeResult:
         yield Label("Publish", classes="header")
         with Horizontal():
-            yield Select(options=self.available_posts)
+            with VerticalGroup():
+                yield Select(options=self.available_posts)
+                yield Label(id="extra-info", variant="accent")
             yield Button("Start", id="start")
             yield Button(
                 "Stop & Quit", id="stop", variant="error", action="app.pop_screen"
@@ -212,14 +221,15 @@ class Publish(Screen):
     def select_changed(self, event: Select.Changed):
         """
         This method will validate files and directories, if there is an error, then the
-        select will have its default value (blank)
+        select will have its default value (BLANK)
         """
-        post = event.value
+        extra_info = self.query_one("#extra-info", Label)
 
-        if post == Select.BLANK:
+        if (post := event.value) == Select.BLANK:
+            extra_info.display = "none"
+
             return
 
-        self.posts_folder_path = get_configuration_value("POSTS_FOLDER_PATH")
         self.post_path = fs.path.combine(self.posts_folder_path, post)
         self.images_folder_path = fs.path.combine(self.post_path, "images")
         self.descriptions_folder_path = fs.path.combine(self.post_path, "descriptions")
@@ -227,46 +237,69 @@ class Publish(Screen):
         self.groups_file_path = fs.path.combine(self.posts_folder_path, "groups.csv")
 
         # Validate images folder
-        self.validate_path(
+        first_validation = self.validate_path(
             self.images_folder_path, "dir", dir_file_type=["*.jpg", "*.jpeg", "*.png"]
         )
 
         # Validate descriptions folder
-        self.validate_path(
+        second_validation = self.validate_path(
             self.descriptions_folder_path, "dir", min_files=3, dir_file_type=["*.txt"]
         )
 
         # Validate groups file
-        self.validate_path(self.groups_file_path, "file")
+        third_validation = self.validate_path(self.groups_file_path, "file")
 
         # Validate filters file
-        self.validate_path(self.filters_file_path, "file")
+        fourth_validation = self.validate_path(self.filters_file_path, "file")
+
+        if not (
+            first_validation
+            and second_validation
+            and third_validation
+            and fourth_validation
+        ):
+            self.query_one(Select).value = Select.BLANK
+
+            return
+
+        # Filters
+        self.publication_filters = read_filters(self.filters_file_path)
+
+        # Groups
+        self.groups = read_groups(self.groups_file_path, self.publication_filters)
+
+        self.num_groups = len(self.groups)
+
+        # Show extra information
+        extra_info.update(
+            f"{', '.join(self.publication_filters)} | {self.num_groups} groups"
+        )
+        extra_info.display = "block"
 
     @on(Button.Pressed, "#start")
     def start_publish(self) -> None:
         select = self.query_one(Select)
-        log = self.query_one(RichLog)
-        post = select.value
 
-        if post == Select.BLANK:
+        if (post := select.value) == Select.BLANK:
             self.app.notify("Select a post", severity="warning")
             return
 
         # Apply .started class
-        self.add_class("started")
+        self.started = True
 
         # Disable the select
         select.disabled = True
 
         # Start the publication process
-        self.start_process(post, log)
+        self.start_process(post)
 
     @work
-    async def start_process(self, post: str, log: RichLog) -> None:
+    async def start_process(self, post: str) -> None:
         chrome_binary_path = get_configuration_value("CHROME_BINARY_PATH")
         posts_folder_path = get_configuration_value("POSTS_FOLDER_PATH")
         chrome_data_dir = fs.path.combine(posts_folder_path, "/profile")
         headless = get_configuration_value("HEADLESS")
+        log = self.query_one(RichLog)
         progress_bar = self.query_one(ProgressBar)
 
         # Images
@@ -283,24 +316,21 @@ class Publish(Screen):
             )
         )
 
-        # Filters
-        publication_filters = read_filters(self.filters_file_path)
-
-        log.write(StyledPanel(Pretty(publication_filters), title="Filters"))
+        # Log filters
+        log.write(StyledPanel(Pretty(self.publication_filters), title="Filters"))
 
         # Groups
-        groups = read_groups(self.groups_file_path, publication_filters)
-        num_groups = len(groups)
+        groups_with_warnings: list[tuple[str, str, str]] = []
         groups_with_errors: list[tuple[str, str, str]] = []
 
         # Set progress bar total
-        progress_bar.total = num_groups
+        progress_bar.total = self.num_groups
 
         log.write(
             StyledPanel(
-                f"This post is going to be publish in [blue]{num_groups}[/] groups, do "
-                "not exit the terminal or close the browser until the process is "
-                "completed"
+                f"This post is going to be publish in [blue]{self.num_groups}[/] groups, "
+                "do not exit the terminal or close the browser until the "
+                "process is completed"
             )
         )
 
@@ -314,13 +344,11 @@ class Publish(Screen):
                 page: Page = browser.pages[0]
 
                 # Get user facebook interface language
-                lang = await get_fb_lang(page)
-
-                if not lang:
+                if not (lang := await get_fb_lang(page)):
                     self.app.pop_screen()  # noqa
 
                     self.notify(
-                        f"Unsupported Facebook language."
+                        f"Unsupported Facebook language. "
                         "Please switch to one of these languages: "
                         f"{', '.join(SUPPORTED_FB_LANGUAGES.values())}."
                         " Then try again.",
@@ -349,7 +377,7 @@ class Publish(Screen):
                     )
                     return
 
-                for index, group in enumerate(groups):
+                for index, group in enumerate(self.groups):
                     try:
                         group_name = group[0]
                         group_url = group[1]
@@ -426,6 +454,23 @@ class Publish(Screen):
 
                                 continue
 
+                        # Check if the group has pending posts
+                        pending_posts_el = page.get_by_text(
+                            re.compile(publish_strs["text_pending_posts"])
+                        )
+
+                        if await pending_posts_el.is_visible():
+                            pending_posts_text = await pending_posts_el.text_content()
+                            pending_posts = pending_posts_text.split()[0]
+
+                            groups_with_warnings.append(
+                                (
+                                    group_name,
+                                    group_url,
+                                    f"Group has {pending_posts} pending posts",
+                                )
+                            )
+
                         if await write_something.is_visible():
                             await write_something.click(force=True)
                         elif await start_discussion.is_visible():
@@ -481,13 +526,17 @@ class Publish(Screen):
                             await photo_video.click(force=True)
                             await expect(file_input).to_be_attached()
 
+                        await wait_random_seconds(3, 4)
+
                         # Upload the images
                         await file_input.set_input_files(images)
 
-                        await sleep(2)
+                        await wait_random_seconds(1)
 
                         # Expect the post button to be enabled
                         await expect(post_button).to_be_enabled()
+
+                        await wait_random_seconds(2, 3)
 
                         # Press the Post button
                         await post_button.click(force=True)
@@ -506,13 +555,13 @@ class Publish(Screen):
                         )
 
                         # Do not wait if the last group is reached
-                        if index < num_groups - 1:
-                            # Wait a random time between 123 seconds and 151 seconds
+                        if index < self.num_groups - 1:
+                            # Wait a random time between 115 seconds and 148 seconds
                             if (index + 1) % 5 == 0:
-                                await wait_random_seconds(123, 151)
-                            # Wait a random time between 61 seconds and 87 seconds
+                                await wait_random_seconds(115, 148)
+                            # Wait a random time between 60 seconds and 75 seconds
                             else:
-                                await wait_random_seconds(61, 87)
+                                await wait_random_seconds(60, 75)
                     # Playwright Error
                     except Error as e:
                         groups_with_errors.append((group_name, group_url, e.message))
@@ -530,34 +579,42 @@ class Publish(Screen):
                     StyledPanel("The task has been completed", msg_type="success")
                 )
 
-                # Write to log file
-                # publication timestamp groups without_errors num_failed
-                num_failed = len(groups_with_errors)
-                num_submitted = num_groups - num_failed
-                headers = ["Post", "Date", "Total groups", "Submitted", "Failed"]
-                line = [
-                    post,
-                    datetime.now().strftime("%a %d %B %Y, %I:%M%p"),
-                    num_groups,
-                    num_submitted,
-                    num_failed,
-                ]
+                # Write to history file
+                if (num_with_warnings := len(groups_with_warnings)) > 0:
+                    log.write(
+                        panels_group(
+                            groups_with_warnings,
+                            extract_msg=lambda x: f"{x[0]} - {x[1]} - {x[2]}",
+                            title=f"Groups with warnings ({num_with_warnings})",
+                            children_msg_type="warning",
+                        )
+                    )
 
-                if num_failed > 0:
+                if (num_failed := len(groups_with_errors)) > 0:
                     log.write(
                         panels_group(
                             groups_with_errors,
                             extract_msg=lambda x: f"{x[0]} - {x[1]} - {x[2]}",
                             title=f"Groups with errors ({num_failed})",
-                            children_msg_type="warning",
+                            children_msg_type="error",
                         )
                     )
 
-                with open_fs(posts_folder_path) as posts_folder_fs:
-                    history_file_path = "log.csv"
-                    file_exists = posts_folder_fs.exists(history_file_path)
+                # publication timestamp groups without_errors num_failed
+                headers = ["Post", "Date", "Total groups", "Submitted", "Failed"]
 
-                    if not file_exists:
+                line = [
+                    post,
+                    datetime.now().strftime("%a %d %B %Y, %I:%M%p"),
+                    self.num_groups,
+                    self.num_groups - num_failed,
+                    num_failed,
+                ]
+
+                with open_fs(posts_folder_path) as posts_folder_fs:
+                    history_file_path = HiSTORY_FILE_PATH
+
+                    if not posts_folder_fs.exists(history_file_path):
                         with posts_folder_fs.open(
                             history_file_path, "w"
                         ) as history_file:
@@ -571,7 +628,7 @@ class Publish(Screen):
                         writer.writerow(line)
 
                 # Remove .started class
-                self.remove_class("started")
+                self.started = False
 
                 # Hide the start button
                 self.query_one("#start", Button).display = False
@@ -592,9 +649,6 @@ class Publish(Screen):
             self.notify(e.message, severity="error")
 
     def notify_post_validation_error(self, msg: str) -> None:
-        select = self.query_one(Select)
-        select.value = Select.BLANK
-
         self.notify(msg, severity="error")
 
     def validate_path(
@@ -603,7 +657,7 @@ class Publish(Screen):
         type_: Literal["file", "dir"],
         min_files: int = None,
         dir_file_type: list[str] = None,
-    ) -> None:
+    ) -> bool:
         """
         Validate the existence of a file or directory.
         :param path: Absolute path to the resource.
@@ -613,54 +667,67 @@ class Publish(Screen):
         :param dir_file_type: The file types to filter in a directory. Default is None.
         :raise fs.opener.errors.OpenerError: Opening a filesystem with an invalid path.
         """
-        head, tail = fs.path.split(path)
-        tail_sty = f"[bold blue]{tail}[/]"
-        type_sty = f"[blue]{type_}[/]"
+        folder, resource = fs.path.split(path)
+        res_s = f"[b]{resource}[/]"
+        type_s = f"[b]{type_}[/]"
+        is_valid = True
 
         try:
-            with open_fs(head) as root_fs:
-                if not root_fs.exists(tail):
+            with open_fs(folder) as root_fs:
+                if not root_fs.exists(resource):
                     self.notify_post_validation_error(
-                        f"Resource {tail_sty} of type {type_sty} does not exist in {head}"
+                        f"Resource {res_s} of type {type_s} does not exist in {folder}"
                     )
 
-                    return
+                    return False
 
                 if type_ == "file":
-                    if not root_fs.isfile(tail):
-                        self.notify_post_validation_error(f"{tail_sty} is not a file")
-                    elif root_fs.getsize(tail) == 0:
-                        self.notify_post_validation_error(f"File {tail_sty} is empty")
+                    if not root_fs.isfile(resource):
+                        self.notify_post_validation_error(f"{res_s} is not a file")
+
+                        is_valid = False
+                    elif root_fs.getsize(resource) == 0:
+                        self.notify_post_validation_error(f"File {res_s} is empty")
+
+                        is_valid = False
                 elif type_ == "dir":
-                    if not root_fs.isdir(tail):
-                        self.notify_post_validation_error(
-                            f"{tail_sty} is not a directory"
-                        )
-                    elif not root_fs.listdir(tail):
-                        self.notify_post_validation_error(f"Folder {tail_sty} is empty")
+                    if not root_fs.isdir(resource):
+                        self.notify_post_validation_error(f"{res_s} is not a directory")
+
+                        is_valid = False
+                    elif not root_fs.listdir(resource):
+                        self.notify_post_validation_error(f"Folder {res_s} is empty")
+
+                        is_valid = False
                     elif (
                         min_files is not None
                         and len(
                             list(
                                 root_fs.filterdir(
-                                    tail, files=dir_file_type, exclude_dirs=["*"]
+                                    resource, files=dir_file_type, exclude_dirs=["*"]
                                 )
                             )
                         )
                         < min_files
                     ):
                         self.notify_post_validation_error(
-                            f"Folder {tail_sty} must contain at least {min_files} files "
-                            f"with types {dir_file_type}"
+                            f"Folder {res_s} must contain at least {min_files} files "
+                            f"with type {dir_file_type}."
                         )
+
+                        is_valid = False
         except OpenerError:
-            self.notify_post_validation_error(f"Path {head} does not exist")
+            self.notify_post_validation_error(f"Path {folder} does not exist")
+
+            is_valid = False
+
+        return is_valid
 
     def load_options(self):
-        posts_folder_path = get_configuration_value("POSTS_FOLDER_PATH")
-
         try:
-            if posts_folder_path == "":
+            if (
+                posts_folder_path := get_configuration_value("POSTS_FOLDER_PATH")
+            ) == "":
                 raise CreateFailed
 
             with open_fs(posts_folder_path) as posts_folder_fs:
@@ -672,7 +739,7 @@ class Publish(Screen):
                     self.available_posts.append((folder_name, folder_name))
         except CreateFailed:
             self.app.notify(
-                f"Invalid posts folder path {posts_folder_path}, check configuration",
+                "Invalid posts folder path, check configuration.",
                 severity="error",
             )
             self.app.pop_screen()

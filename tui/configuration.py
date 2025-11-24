@@ -94,3 +94,4 @@ class Configuration(Screen):
         write_conf_file(config)
 
         self.app.notify("Configuration saved", timeout=1)
+        self.app.pop_screen()

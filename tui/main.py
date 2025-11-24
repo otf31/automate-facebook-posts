@@ -17,9 +17,10 @@ from manual_mode import ManualMode
 from publish import Publish
 from subscription import get_subscription_status
 
-INTRO = """Our automation tool makes group engagement effortless. [bold]Post to multiple 
-Facebook groups with just a few clicks[/], eliminating manual work. Ideal for admins and 
-members aiming to save time and maintain activity."""
+INTRO = """
+This semi-automation tool makes group posting easy. 
+[bold]Publish to multiple Facebook groups in just a few clicks[/], saving time and effort.
+"""
 
 
 class Autofbpost(App[None]):
@@ -35,7 +36,7 @@ class Autofbpost(App[None]):
         "about": About,
     }
     BINDINGS = {
-        Binding("ctrl+q", "", "Quit", show=False),
+        Binding("ctrl+q", "app.quit", "Quit", show=False),
         ("h", "push_screen('history')", "History"),
         ("c", "push_screen('configuration')", "Configuration"),
         ("a", "push_screen('about')", "About"),
@@ -61,7 +62,7 @@ class Autofbpost(App[None]):
 
     @on(Button.Pressed, "#publish")
     def show_publish_screen(self):
-        publish_button = self.query_one("#publish")
+        publish_button = self.query_one("#publish", Button)
 
         publish_button.loading = True
         self.set_buttons_state("disable")

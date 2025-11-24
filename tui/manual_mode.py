@@ -11,7 +11,7 @@ from constants import FACEBOOK_URL
 
 MANUAL_MODE_INTRO = (
     "In manual mode, you can interact with the browser and perform tasks manually like "
-    "sign up into your Facebook account, choosing a profile, etc.\n\n"
+    "sign in into your Facebook account, choosing a profile and so on.\n\n"
     "Pressing the [b]Close[/b] button will close the browser window."
 )
 

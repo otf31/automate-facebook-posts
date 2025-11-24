@@ -89,17 +89,12 @@ About {
 
     Grid {
         grid-size: 1;
-        height: 12;
+        height: 13;
         width: 60;
         padding: 0 1;
         align: center middle;
         border: thick $background 80%;
         background: $surface;
-    }
-
-    .label {
-        width: 100%;
-        content-align: center middle;
     }
 
     Center {

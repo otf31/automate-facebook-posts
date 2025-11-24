@@ -46,7 +46,7 @@ async def get_fb_lang(page: Page) -> str | bool:
 async def navigate(page: Page, url: str) -> None:
     """
     Navigates to the given URL.
-    The errors are handled by the caller function.
+    Errors are handled by the caller function.
     :param page: The browser page instance.
     :param url: The URL to navigate to.
     """

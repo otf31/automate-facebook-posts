@@ -16,32 +16,32 @@ def get_device_id() -> str:
 async def get_subscription_status() -> (bool, str | None):
     """
     Get the subscription status.
-    :return: A boolean indicating if the subscription is active.
+    :return: A boolean indicating whether the subscription is active.
     """
     # Get the machine id
     machine_id = get_device_id()
 
     try:
         async with httpx.AsyncClient() as client:
-            r = await client.get(
+            response = await client.get(
                 f"{API_URL}check-subscription",
                 params={"machine_id": machine_id},
                 timeout=httpx.Timeout(70),
             )
 
             # Raise an exception if the status code is 4xx or 5xx
-            r.raise_for_status()
+            response.raise_for_status()
 
-            if r.status_code == 200:
+            if response.status_code == 200:
                 return True, None
     except HTTPStatusError as e:
         if e.response.status_code < 500:
-            return False, "No active subscription"
+            return False, "No active subscription found."
         else:
             return (
                 False,
                 "An error occurred while checking the subscription status. Contact "
-                "support",
+                "support.",
             )
     except (ConnectError, ReadTimeout):
         return False, "Could not connect to the server."

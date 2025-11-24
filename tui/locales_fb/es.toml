@@ -4,6 +4,7 @@ language = "Español"
 groups_page_title = '.*Grupos \| Facebook'
 
 [publish]
+text_pending_posts = '\d+ (publicación|publicaciones)'
 button_write_something = "Escribe algo.*"
 button_start_discussion = "Iniciar conversación.*"
 tab_discussion = "Conversación.*"

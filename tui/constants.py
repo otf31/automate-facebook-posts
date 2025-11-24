@@ -1,15 +1,14 @@
 import platform
 from typing import Literal
 
-os = platform.system()
-
 AUTHOR = "otf31"
-EMAIL = "otf31.351663@gmail.com"
+EMAIL = "otf31x@outlook.com"
+WEBPAGE_URL = "https://autofbpost.sourceforge.net/"
 API_URL = "https://automate-facebook-posts-back.onrender.com/"
 FACEBOOK_URL = "https://www.facebook.com"
 CHROME_BINARY_PATH = (
     r"C:\Program Files\Google\Chrome\Application\chrome.exe"
-    if os == "Windows"
+    if (platform.system()) == "Windows"
     else "/opt/google/chrome/google-chrome"
 )
 APP_NAME = "autofbpost"

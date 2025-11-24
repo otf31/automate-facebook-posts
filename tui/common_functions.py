@@ -53,7 +53,7 @@ def panels_group(
     iterable: list[T],
     extract_msg: Callable[[T], str],
     title: str = None,
-    children_msg_type: Literal["info", "warning", "success"] = "info",
+    children_msg_type: Literal["info", "error", "warning", "success"] = "info",
 ) -> Panel:
     """
     Print a group of panels.
@@ -86,17 +86,15 @@ async def wait_random_seconds(start: int, end: int = None) -> None:
     await sleep(secrets.randbelow(end - start + 1) + start)
 
 
-def validate_conf_file():
+def validate_conf_file() -> None:
     """
     Create if the configuration file does not exists and write with the default
     configuration. If the configuration file exists but it does not have valid keys,
     it will be overwritten with the default configuration.
     """
     with UserConfigFS(APP_NAME) as user_config_fs:
-        exists = user_config_fs.exists(CONFIG_FILE_PATH)
-
         # Create if it does not exist
-        if not exists:
+        if not (user_config_fs.exists(CONFIG_FILE_PATH)):
             write_conf_file(DEFAULT_CONFIG)
         else:
             # Check if the configuration file has valid keys
@@ -153,9 +151,9 @@ def get_locales_fb_strings(lang: str) -> dict[str, dict[str, str] | str]:
     :param lang: The language code.
     :return: The Facebook strings depending on the language.
     """
-    locales_fb_path = fs.path.join(get_executable_dir_location(), "locales_fb")
-
-    with open_fs(locales_fb_path) as locales_fb:
+    with open_fs(
+        fs.path.join(get_executable_dir_location(), "locales_fb")
+    ) as locales_fb:
         with locales_fb.open(f"{lang}.toml") as locale_file:
             return rtoml.load(locale_file)
 
