@@ -12,6 +12,7 @@ from starlette import status
 from .config import settings
 from .database import SessionDep
 from .models import RoleEnum, User
+from .security import verify_password
 from .startup import create_super_admin_user
 
 
@@ -24,20 +25,26 @@ async def lifespan(app: FastAPI):  # noqa
     yield
 
 
-if settings.app_mode == "production":
+if settings.env == "production":
     app = FastAPI(docs_url=None, redoc_url=None, openapi_url=None, lifespan=lifespan)
 else:
     app = FastAPI(lifespan=lifespan)
 
 
-def authenticate_super_admin(user: User):
-    if not user:
+def authenticate_super_admin(super_admin: User, password: str):
+    """
+    Authenticate a super admin user
+    """
+    if not super_admin:
         return False
 
-    if user.role != RoleEnum.super_admin:
+    if super_admin.role != RoleEnum.super_admin:
         return False
 
-    return user
+    if not verify_password(password, super_admin.password):
+        return False
+
+    return super_admin
 
 
 def create_access_token(data: dict, expires_delta: timedelta):
@@ -55,7 +62,8 @@ def create_access_token(data: dict, expires_delta: timedelta):
 
 
 class UserCreateUpdate(BaseModel):
-    superadmin_machine_id: str
+    super_admin_id: str
+    super_admin_password: str
     machine_id: str
     user_id: str
     days: int = 0
@@ -75,13 +83,13 @@ def register_update(payload: UserCreateUpdate, session: SessionDep) -> User:
     """
     # Check if the user exists
     super_admin = session.exec(
-        select(User).where(User.machine_id == payload.superadmin_machine_id)  # noqa
+        select(User).where(payload.super_admin_id == settings.super_admin_id)
     ).first()
     user = session.exec(
-        select(User).where(User.machine_id == payload.machine_id)  # noqa
+        select(User).where(User.machine_id == payload.machine_id)
     ).first()
 
-    if not (authenticate_super_admin(super_admin)):
+    if not (authenticate_super_admin(super_admin, payload.super_admin_password)):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="только для Денис",

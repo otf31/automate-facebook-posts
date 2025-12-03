@@ -4,9 +4,10 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 class Settings(BaseSettings):
     app_name: str
 
-    admin_email: str
-    admin_id: str
-    admin_machine_id: str
+    super_admin_email: str
+    super_admin_id: str
+    super_admin_password: str
+    super_admin_machine_id: str
 
     postgres_user: str
     postgres_password: str
@@ -17,9 +18,9 @@ class Settings(BaseSettings):
     jwt_secret_key: str
     jwt_algorithm: str
 
-    app_mode: str
+    env: str
 
-    model_config = SettingsConfigDict(env_file=".env")
+    model_config = SettingsConfigDict(env_file=[".env", ".env.prod"])
 
 
-settings = Settings()  # type: ignore
+settings = Settings()

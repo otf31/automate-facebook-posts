@@ -11,9 +11,10 @@ PASSWORD = settings.postgres_password
 HOST = settings.postgres_host
 PORT = settings.postgres_port
 DB = settings.postgres_dbname
+ENV = settings.env
 
 
-if (APP_MODE := settings.app_mode) == "development":
+if ENV == "development":
     DATABASE_URL = f"postgresql+psycopg2://{USER}:{PASSWORD}@{HOST}:{PORT}/{DB}"
 else:
     DATABASE_URL = (

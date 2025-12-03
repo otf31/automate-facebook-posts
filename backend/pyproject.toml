@@ -2,17 +2,18 @@
 name = "autofbpost-api"
 version = "0.1.1"
 description = "Automate facebook posts - API"
-requires-python = ">=3.13"
+requires-python = ">=3.11"
 dependencies = [
-    "alembic>=1.17.1",
-    "fastapi[standard]>=0.121.1",
+    "alembic>=1.17.2",
+    "fastapi[standard]>=0.123.5",
+    "httpx>=0.28.1",
     "psycopg2-binary>=2.9.11",
+    "pwdlib[argon2]>=0.3.0",
     "pydantic-settings>=2.12.0",
     "pyjwt>=2.10.1",
+    "pytest>=9.0.1",
     "sqlmodel>=0.0.27",
 ]
 
 [dependency-groups]
-dev = [
-    "ruff>=0.14.4",
-]
+dev = ["ruff>=0.14.7"]
