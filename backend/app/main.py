@@ -83,7 +83,7 @@ def register_update(payload: UserCreateUpdate, session: SessionDep) -> User:
     """
     # Check if the user exists
     super_admin = session.exec(
-        select(User).where(payload.super_admin_id == settings.super_admin_id)
+        select(User).where(User.user_id == payload.super_admin_id)
     ).first()
     user = session.exec(
         select(User).where(User.machine_id == payload.machine_id)
