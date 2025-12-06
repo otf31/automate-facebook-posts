@@ -2,17 +2,17 @@ from contextlib import asynccontextmanager
 from datetime import datetime, timedelta, timezone
 
 import jwt
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Response
 from jwt import ExpiredSignatureError
 from jwt.exceptions import InvalidTokenError
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from sqlmodel import select
 from starlette import status
 
 from .config import settings
 from .database import SessionDep
-from .models import RoleEnum, User
-from .security import verify_password
+from .models import Admin, User
+from .security import get_password_hash, verify_password
 from .startup import create_super_admin_user
 
 
@@ -31,20 +31,17 @@ else:
     app = FastAPI(lifespan=lifespan)
 
 
-def authenticate_super_admin(super_admin: User, password: str):
+def authenticate_super_admin(super_admin: Admin, admin_id: str, password: str) -> bool:
     """
     Authenticate a super admin user
     """
-    if not super_admin:
-        return False
-
-    if super_admin.role != RoleEnum.super_admin:
+    if admin_id != super_admin.admin_id:
         return False
 
     if not verify_password(password, super_admin.password):
         return False
 
-    return super_admin
+    return True
 
 
 def create_access_token(data: dict, expires_delta: timedelta):
@@ -61,15 +58,45 @@ def create_access_token(data: dict, expires_delta: timedelta):
     return encoded_jwt
 
 
+class SuperAdminPasswordUpdate(BaseModel):
+    previous_password: str = Field(min_length=8)
+    new_password: str = Field(min_length=8)
+
+
 class UserCreateUpdate(BaseModel):
-    super_admin_id: str
-    super_admin_password: str
-    machine_id: str
-    user_id: str
+    super_admin_id: str = Field(min_length=1)
+    super_admin_password: str = Field(min_length=1)
+    machine_id: str = Field(min_length=1)
+    user_id: str = Field(min_length=8)
     days: int = 0
     hours: int = 0
     minutes: int
     comment: str | None = None
+
+
+@app.post("/change-super-admin-password")
+def change_super_admin_password(payload: SuperAdminPasswordUpdate, session: SessionDep):
+    """
+    Change super admin password
+    :param payload: Body of the request
+    :param session: SessionDep dependency
+    :return: An HTTP response
+    """
+    super_admin = session.exec(select(Admin)).first()
+
+    if verify_password(payload.previous_password, super_admin.password):
+        super_admin.password = get_password_hash(payload.new_password)
+
+        session.add(super_admin)
+        session.commit()
+
+        return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+    raise HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        detail="только для Денис",
+        headers={"WWW-Authenticate": "Bearer"},
+    )
 
 
 @app.post("/register-update")
@@ -81,15 +108,16 @@ def register_update(payload: UserCreateUpdate, session: SessionDep) -> User:
     :param session: SessionDep dependency
     :return: A user object or an HTTPException
     """
-    # Check if the user exists
-    super_admin = session.exec(
-        select(User).where(User.user_id == payload.super_admin_id)
-    ).first()
+    super_admin = session.exec(select(Admin)).first()
     user = session.exec(
         select(User).where(User.machine_id == payload.machine_id)
     ).first()
 
-    if not (authenticate_super_admin(super_admin, payload.super_admin_password)):
+    if not (
+        authenticate_super_admin(
+            super_admin, payload.super_admin_id, payload.super_admin_password
+        )
+    ):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="только для Денис",

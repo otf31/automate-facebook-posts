@@ -20,8 +20,8 @@ down_revision: Union[str, None] = "4671c78364f9"
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 
-SUPER_ADMIN_ID = settings.super_admin_id
-SUPER_ADMIN_PASSWORD = settings.super_admin_password
+# SUPER_ADMIN_ID = settings.super_admin_id
+# SUPER_ADMIN_PASSWORD = settings.super_admin_password
 
 
 def upgrade() -> None:
@@ -34,7 +34,7 @@ def upgrade() -> None:
     op.alter_column("users", "is_disabled", existing_type=sa.BOOLEAN(), nullable=False)
 
     # Set super admin password
-    hashed_password = get_password_hash(SUPER_ADMIN_PASSWORD)
+    hashed_password = get_password_hash("")  # SUPER_ADMIN_PASSWORD
     conn = op.get_bind()
 
     conn.execute(
@@ -44,7 +44,7 @@ def upgrade() -> None:
             WHERE user_id = :user_id
             AND role = 'super_admin'
         """),
-        {"password": hashed_password, "user_id": SUPER_ADMIN_ID},
+        {"password": hashed_password, "user_id": ""},  # SUPER_ADMIN_ID
     )
 
 

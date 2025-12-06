@@ -6,8 +6,6 @@ class Settings(BaseSettings):
 
     super_admin_email: str
     super_admin_id: str
-    super_admin_password: str
-    super_admin_machine_id: str
 
     postgres_user: str
     postgres_password: str
