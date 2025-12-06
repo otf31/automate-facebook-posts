@@ -1,11 +1,11 @@
 [project]
 name = "autofbpost-api"
-version = "0.2.0"
+version = "0.2.1"
 description = "Automate facebook posts - API"
 requires-python = ">=3.11"
 dependencies = [
     "alembic>=1.17.2",
-    "fastapi[standard]>=0.123.5",
+    "fastapi[standard]>=0.124.0",
     "httpx>=0.28.1",
     "psycopg2-binary>=2.9.11",
     "pwdlib[argon2]>=0.3.0",
@@ -16,4 +16,4 @@ dependencies = [
 ]
 
 [dependency-groups]
-dev = ["ruff>=0.14.7"]
+dev = ["ruff>=0.14.8"]
