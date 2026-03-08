@@ -221,11 +221,11 @@ class Publish(Screen):
     def select_changed(self, event: Select.Changed):
         """
         This method will validate files and directories, if there is an error, then the
-        select will have its default value (BLANK)
+        select will have its default value (NULL)
         """
         extra_info = self.query_one("#extra-info", Label)
 
-        if (post := event.value) == Select.BLANK:
+        if (post := event.value) == Select.NULL:
             extra_info.display = "none"
 
             return
@@ -258,7 +258,7 @@ class Publish(Screen):
             and third_validation
             and fourth_validation
         ):
-            self.query_one(Select).value = Select.BLANK
+            self.query_one(Select).value = Select.NULL
 
             return
 
@@ -271,8 +271,9 @@ class Publish(Screen):
         self.num_groups = len(self.groups)
 
         # Show extra information
+
         extra_info.update(
-            f"{', '.join(self.publication_filters)} | {self.num_groups} groups"
+            f"{', '.join(self.publication_filters)} | {self.num_groups} group{'' if self.num_groups == 1 else 's'}"
         )
         extra_info.display = "block"
 
@@ -280,7 +281,7 @@ class Publish(Screen):
     def start_publish(self) -> None:
         select = self.query_one(Select)
 
-        if (post := select.value) == Select.BLANK:
+        if (post := select.value) == Select.NULL:
             self.app.notify("Select a post", severity="warning")
             return
 
@@ -476,9 +477,8 @@ class Publish(Screen):
                         elif await start_discussion.is_visible():
                             await start_discussion.click(force=True)
 
-                        # Posting loading
-                        posting_el = page.get_by_text(
-                            re.compile(publish_strs["loader_posting"])
+                        posting_el = page.locator(
+                            f'span:has-text("{publish_strs["loader_posting"]}")'
                         )
 
                         post_button = page.get_by_role(
