@@ -12,7 +12,6 @@ class User(SQLModel, table=True):
         sa_column=sa.Column(sa.UUID(as_uuid=True), primary_key=True),
     )
     machine_id: str = Field(index=True, unique=True)
-    user_id: str = Field()
     jwt: str | None = Field(default=None)
     previous_jwt: str | None = Field(default=None)
     comment: str | None = Field(default=None)

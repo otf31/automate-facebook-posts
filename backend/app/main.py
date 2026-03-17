@@ -2,12 +2,14 @@ from contextlib import asynccontextmanager
 from datetime import datetime, timedelta, timezone
 
 import jwt
-from fastapi import FastAPI, HTTPException, Response
+from fastapi import FastAPI, HTTPException, Response, Request
+from fastapi.exceptions import RequestValidationError
 from jwt import ExpiredSignatureError
 from jwt.exceptions import InvalidTokenError
 from pydantic import BaseModel, Field
 from sqlmodel import select
 from starlette import status
+from starlette.responses import JSONResponse
 
 from .config import settings
 from .database import SessionDep
@@ -29,6 +31,26 @@ if settings.env == "production":
     app = FastAPI(docs_url=None, redoc_url=None, openapi_url=None, lifespan=lifespan)
 else:
     app = FastAPI(lifespan=lifespan)
+
+
+@app.exception_handler(RequestValidationError)
+async def validation_exception_handler(_: Request, exc: RequestValidationError):
+    sanitized_errors = []
+
+    for err in exc.errors():
+        sanitized_errors.append(
+            {
+                "loc": err.get("loc"),
+                "msg": err.get("msg"),
+                "type": err.get("type"),
+                # ❌ DO NOT include "input"
+            }
+        )
+
+    return JSONResponse(
+        status_code=422,
+        content={"detail": sanitized_errors},
+    )
 
 
 def authenticate_super_admin(super_admin: Admin, admin_id: str, password: str) -> bool:
@@ -67,7 +89,6 @@ class UserCreateUpdate(BaseModel):
     super_admin_id: str = Field(min_length=1)
     super_admin_password: str = Field(min_length=1)
     machine_id: str = Field(min_length=1)
-    user_id: str = Field(min_length=8)
     days: int = 0
     hours: int = 0
     minutes: int
@@ -126,16 +147,15 @@ def register_update(payload: UserCreateUpdate, session: SessionDep) -> User:
 
     # If the user exists then update the jwt, otherwise create a new user with the jwt
     if not user:
-        user = User(user_id=payload.user_id, machine_id=payload.machine_id)
+        user = User(machine_id=payload.machine_id)
 
     # Save the previous jwt token
     previous_jwt = user.jwt
 
     jwt_payload = {
-        "sub": str(user.id),
-        "user_id": user.user_id,
-        "machine_id": user.machine_id,
+        "sub": user.machine_id,
         "iat": datetime.now(timezone.utc),
+        "comment": user.comment,
     }
 
     # Create a new jwt token
@@ -147,9 +167,11 @@ def register_update(payload: UserCreateUpdate, session: SessionDep) -> User:
     )
 
     # Update the user object
-    user.comment = payload.comment
     user.jwt = access_token
     user.previous_jwt = previous_jwt
+
+    if payload.comment:
+        user.comment = payload.comment
 
     session.add(user)
     session.commit()
