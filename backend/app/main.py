@@ -1,12 +1,13 @@
 from contextlib import asynccontextmanager
-from datetime import datetime, timedelta, timezone
+from datetime import date, datetime, timezone
+from zoneinfo import ZoneInfo
 
 import jwt
-from fastapi import FastAPI, HTTPException, Response, Request
+from fastapi import Depends, FastAPI, HTTPException, Request, Response
 from fastapi.exceptions import RequestValidationError
 from jwt import ExpiredSignatureError
 from jwt.exceptions import InvalidTokenError
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 from sqlmodel import select
 from starlette import status
 from starlette.responses import JSONResponse
@@ -47,10 +48,7 @@ async def validation_exception_handler(_: Request, exc: RequestValidationError):
             }
         )
 
-    return JSONResponse(
-        status_code=422,
-        content={"detail": sanitized_errors},
-    )
+    return JSONResponse(status_code=422, content={"detail": sanitized_errors})
 
 
 def authenticate_super_admin(super_admin: Admin, admin_id: str, password: str) -> bool:
@@ -66,12 +64,22 @@ def authenticate_super_admin(super_admin: Admin, admin_id: str, password: str) -
     return True
 
 
-def create_access_token(data: dict, expires_delta: timedelta):
+def create_access_token(data: dict, expires_on: date):
     to_encode = data.copy()
 
-    expire = datetime.now(timezone.utc) + expires_delta
-
-    to_encode.update({"exp": expire})
+    to_encode.update(
+        {
+            "exp": datetime(
+                expires_on.year,
+                expires_on.month,
+                expires_on.day,
+                23,
+                59,
+                59,
+                tzinfo=ZoneInfo("America/Lima"),
+            )
+        }
+    )
 
     encoded_jwt = jwt.encode(
         to_encode, settings.jwt_secret_key, algorithm=settings.jwt_algorithm
@@ -89,10 +97,42 @@ class UserCreateUpdate(BaseModel):
     super_admin_id: str = Field(min_length=1)
     super_admin_password: str = Field(min_length=1)
     machine_id: str = Field(min_length=1)
-    days: int = 0
-    hours: int = 0
-    minutes: int
+    expires_on: date = Field()
     comment: str | None = None
+
+    @field_validator("expires_on")
+    @classmethod
+    def must_be_future(cls, value):
+        if datetime(
+            value.year,
+            value.month,
+            value.day,
+            23,
+            59,
+            59,
+            tzinfo=ZoneInfo("America/Lima"),
+        ) <= datetime.now(timezone.utc):
+            raise ValueError("Date must be in the future")
+
+        return value
+
+
+def auth_super_admin(
+    payload: UserCreateUpdate,
+    session: SessionDep,
+):
+    super_admin = session.exec(select(Admin)).first()
+
+    if not (
+        authenticate_super_admin(
+            super_admin, payload.super_admin_id, payload.super_admin_password
+        )
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="только для Денис",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
 
 
 @app.post("/change-super-admin-password")
@@ -120,8 +160,11 @@ def change_super_admin_password(payload: SuperAdminPasswordUpdate, session: Sess
     )
 
 
-@app.post("/register-update")
-def register_update(payload: UserCreateUpdate, session: SessionDep) -> User:
+@app.post("/register-update", dependencies=[Depends(auth_super_admin)])
+def register_update(
+    payload: UserCreateUpdate,
+    session: SessionDep,
+) -> User:
     """
     Endpoint to create or update a user based on the machine_id and a time delta
     This endpoint will create or update the user's jwt token
@@ -129,21 +172,9 @@ def register_update(payload: UserCreateUpdate, session: SessionDep) -> User:
     :param session: SessionDep dependency
     :return: A user object or an HTTPException
     """
-    super_admin = session.exec(select(Admin)).first()
     user = session.exec(
         select(User).where(User.machine_id == payload.machine_id)
     ).first()
-
-    if not (
-        authenticate_super_admin(
-            super_admin, payload.super_admin_id, payload.super_admin_password
-        )
-    ):
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="только для Денис",
-            headers={"WWW-Authenticate": "Bearer"},
-        )
 
     # If the user exists then update the jwt, otherwise create a new user with the jwt
     if not user:
@@ -159,12 +190,7 @@ def register_update(payload: UserCreateUpdate, session: SessionDep) -> User:
     }
 
     # Create a new jwt token
-    access_token_expires = timedelta(
-        days=payload.days, hours=payload.hours, minutes=payload.minutes
-    )
-    access_token = create_access_token(
-        data=jwt_payload, expires_delta=access_token_expires
-    )
+    access_token = create_access_token(data=jwt_payload, expires_on=payload.expires_on)
 
     # Update the user object
     user.jwt = access_token
@@ -207,7 +233,7 @@ def check_subscription(machine_id: str, session: SessionDep) -> str | None:
             options={"require": ["sub", "exp", "iat"]},
         )
 
-        return user.machine_id
+        return user.jwt
     except ExpiredSignatureError:
         raise_error("Subscription expired")
     except InvalidTokenError:
