@@ -1,6 +1,7 @@
 # AutoFBPost
 
-**AutoFBPost** is a semi-automation tool with a text user interface (TUI) that makes posting to multiple Facebook groups easy. Save time and effort by publishing to several groups with just a few clicks.
+**AutoFBPost** is a semi-automation tool with a text user interface (TUI) that makes posting to multiple Facebook groups
+easy. Save time and effort by publishing to several groups with just a few clicks.
 
 ## 📋 Features
 
@@ -36,22 +37,24 @@ No additional installation or dependencies are required. Just download and run t
 ### First run
 
 On first run, you can configure the parameters through the **Configuration** screen. Access it by:
+
 - Pressing `c` from the main menu, or
 - Clicking the "Configuration" option in the menu
 
 You can configure the following parameters:
 
 1. **Chromium-based browser binary path**: Path to your Chromium-based browser executable
-   - Examples: Google Chrome, Microsoft Edge, Brave, Opera, etc.
-   - Windows (Chrome): `C:\Program Files\Google\Chrome\Application\chrome.exe`
-   - Windows (Edge): `C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe`
-   - Linux (Chrome): `/opt/google/chrome/google-chrome` (or wherever your browser is installed)
+    - Examples: Google Chrome, Microsoft Edge, Brave, Opera, etc.
+    - Windows (Chrome): `C:\Program Files\Google\Chrome\Application\chrome.exe`
+    - Windows (Edge): `C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe`
+    - Linux (Chrome): `/opt/google/chrome/google-chrome` (or wherever your browser is installed)
 
 2. **Posts folder path**: Path to the folder where your posts are stored
 
 3. **Headless mode**: Enable/disable headless mode (no GUI)
 
-After configuring the parameters, click the **Save** button to save your settings. The configuration will be used for all subsequent runs.
+After configuring the parameters, click the **Save** button to save your settings. The configuration will be used for
+all subsequent runs.
 
 ### Folder structure
 
@@ -78,6 +81,7 @@ Music Group;https://www.facebook.com/groups/789012;music,entertainment
 ```
 
 **Columns:**
+
 - **Column 1**: Group name
 - **Column 2**: Complete Facebook group URL
 - **Column 3**: Filters separated by commas (used to filter groups based on the post)
@@ -92,7 +96,8 @@ technology,programming,python
 
 ### Description format
 
-Each `.txt` file in the `descriptions/` folder should contain a complete description for the post. The application will randomly select a description from these files.
+Each `.txt` file in the `descriptions/` folder should contain a complete description for the post. The application will
+randomly select a description from these files.
 
 ## 🎮 Usage
 
@@ -121,17 +126,17 @@ Simply execute the downloaded executable file:
 
 1. Select a post from the dropdown menu
 2. The application will automatically validate:
-   - Existence of the images folder
-   - Minimum 3 description files
-   - Valid groups file
-   - Valid filters file
+    - Existence of the images folder
+    - Minimum 3 description files
+    - Valid groups file
+    - Valid filters file
 3. Click "Start" to begin
 4. The application will:
-   - Select a random description
-   - Filter groups according to the specified filters
-   - Publish to each group with random delays between posts
-   - Show real-time progress
-   - Record history upon completion
+    - Select a random description
+    - Filter groups according to the specified filters
+    - Publish to each group with random delays between posts
+    - Show real-time progress
+    - Record history upon completion
 
 ### Delays between posts
 
@@ -183,6 +188,7 @@ tui/
 ## 🌍 Supported languages
 
 The Facebook interface must be in one of the following languages:
+
 - **English** (en)
 - **Spanish** (es)
 
@@ -191,6 +197,7 @@ If your Facebook account is in another language, change the language in Facebook
 ## 📝 History
 
 Publication history is automatically saved in `log.csv` within the posts folder. It contains:
+
 - Post name
 - Date and time
 - Total groups
@@ -215,6 +222,7 @@ Developed by **@otf31**
 ## 🤝 Contributing
 
 Contributions are welcome. Please:
+
 1. Fork the project
 2. Create a feature branch (`git checkout -b feature/AmazingFeature`)
 3. Commit your changes (`git commit -m 'Add some AmazingFeature'`)
@@ -231,4 +239,6 @@ For more information, visit: https://autofbpost.sourceforge.net/
 
 ---
 
-**Current version**: 0.3.0
+## LICENSE
+
+This project is licensed under the GNU General Public License v3.0.

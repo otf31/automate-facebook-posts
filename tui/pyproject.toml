@@ -8,11 +8,11 @@ dependencies = [
     "fs>=2.4.16",
     "httpx>=0.28.1",
     "nuitka>=4.0.8",
-    "playwright==1.58.0",
+    "playwright>=1.59.0",
     "py-machineid>=1.0.0",
     "rtoml>=0.12.0",
     "ruff>=0.15.12",
-    "textual>=8.2.4",
+    "textual>=8.2.5",
 ]
 
 [dependency-groups]

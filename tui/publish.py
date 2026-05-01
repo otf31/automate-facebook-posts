@@ -488,13 +488,17 @@ class Publish(Screen):
                         # Wait for the post button to be visible
                         await post_button.wait_for(timeout=6000)
 
-                        # Textarea elements
-                        textarea_create_post = page.locator(
-                            '[aria-placeholder*="'
-                            f'{publish_strs["textarea_create_post"]}"]'
-                        )
-                        textarea_write_something = page.locator(
-                            '[aria-placeholder*="'
+                        await wait_random_seconds(1)
+
+                        # Get the dialog (it is easier to find elements inside this)
+                        publication_dialog = page.get_by_role("dialog")
+
+                        # Textarea elements (Title)
+                        textarea_create_post = publication_dialog.get_by_placeholder(
+                            re.compile(publish_strs["textarea_create_post"]))
+
+                        textarea_write_something = publication_dialog.locator(
+                            '[aria-label*="'
                             f'{publish_strs["textarea_write_something"]}"]'
                         )
 
@@ -503,13 +507,19 @@ class Publish(Screen):
                         # Expect the textarea to be visible
                         await expect(textarea).to_be_visible()
 
+                        # Press Tab button to focus description textarea
+                        # Title -> Description
+                        await page.keyboard.press("Tab")
+
+                        focused_textarea = publication_dialog.locator(":focus")
+
                         description = pick_random_description(descriptions)
 
                         # Fill the description
-                        await textarea.fill(description)
+                        await focused_textarea.fill(description)
 
                         # Get the file input element
-                        file_input = page.locator(
+                        file_input = publication_dialog.locator(
                             '[accept="image/*,image/heif,image/heic,video/*,'
                             'video/mp4,video/x-m4v,video/x-matroska,.mkv"]',
                         ).last
@@ -519,7 +529,7 @@ class Publish(Screen):
                         except AssertionError:
                             # If the file_input is not present, then click the
                             # Photo/video button
-                            photo_video = page.get_by_label(
+                            photo_video = publication_dialog.get_by_label(
                                 publish_strs["button_photo_video"]
                             )
 
@@ -701,14 +711,12 @@ class Publish(Screen):
                         is_valid = False
                     elif (
                         min_files is not None
-                        and len(
+                        and
+                        len(
                             list(
-                                root_fs.filterdir(
-                                    resource, files=dir_file_type, exclude_dirs=["*"]
-                                )
+                                root_fs.filterdir(resource, files=dir_file_type, exclude_dirs=["*"])
                             )
-                        )
-                        < min_files
+                        ) < min_files
                     ):
                         self.notify_post_validation_error(
                             f"Folder {res_s} must contain at least {min_files} files "
