@@ -493,42 +493,37 @@ class Publish(Screen):
                         # Get the dialog (it is easier to find elements inside this)
                         publication_dialog = page.get_by_role("dialog")
 
-                        # Textarea elements (Title)
-                        textarea_create_post = publication_dialog.get_by_placeholder(
-                            re.compile(publish_strs["textarea_create_post"]))
-
-                        textarea_write_something = publication_dialog.locator(
-                            '[aria-label*="'
-                            f'{publish_strs["textarea_write_something"]}"]'
-                        )
-
-                        textarea = textarea_create_post.or_(textarea_write_something)
-
-                        # Expect the textarea to be visible
-                        await expect(textarea).to_be_visible()
-
-                        # Press Tab button to focus description textarea
-                        # Title -> Description
-                        await page.keyboard.press("Tab")
-
-                        focused_textarea = publication_dialog.locator(":focus")
-
                         description = pick_random_description(descriptions)
 
-                        # Fill the description
-                        await focused_textarea.fill(description)
+                        await wait_random_seconds(1)
+
+                        # Inside the dialog could be two textboxes so we need
+                        # to manage such cases
+                        textarea = page.get_by_role("textbox")
+
+                        try:
+                            await expect(textarea).to_have_count(2, timeout=3000)
+
+                            # Press Tab button to focus description textarea
+                            # Title -> Description
+                            await page.keyboard.press("Tab")
+
+                            focused_textarea = publication_dialog.locator(":focus")
+
+                            # Fill the description
+                            await focused_textarea.fill(description)
+                        except AssertionError:
+                            # Fill the description
+                            await textarea.fill(description)
 
                         # Get the file input element
-                        file_input = publication_dialog.locator(
-                            '[accept="image/*,image/heif,image/heic,video/*,'
-                            'video/mp4,video/x-m4v,video/x-matroska,.mkv"]',
-                        ).last
+                        file_input = publication_dialog.locator("input[type='file']")
 
                         try:
                             await expect(file_input).to_be_attached()
                         except AssertionError:
                             # If the file_input is not present, then click the
-                            # Photo/video button
+                            # Photo/video button (this might not be necessary anymore)
                             photo_video = publication_dialog.get_by_label(
                                 publish_strs["button_photo_video"]
                             )
