@@ -1,8 +1,15 @@
+import os
 import platform
 from typing import Literal
 
-AUTHOR = "otf31"
+from _version import __version__
+
+OWNER = "otf31"
+REPOSITORY_NAME = "automate-facebook-posts"
 EMAIL = "otf31x@outlook.com"
+REPOSITORY_URL = f"https://github.com/{OWNER}/{REPOSITORY_NAME}"
+GITHUB_RELEASE_API = f"https://api.github.com/repos/{OWNER}/{REPOSITORY_NAME}/releases/latest"
+APP_VERSION = __version__
 WEBPAGE_URL = "https://autofbpost.sourceforge.net/"
 API_URL = "https://automate-facebook-posts-back.onrender.com/"
 FACEBOOK_URL = "https://www.facebook.com"
@@ -21,3 +28,4 @@ DEFAULT_CONFIG = {
     "HEADLESS": False,
 }
 SUPPORTED_FB_LANGUAGES = {"en": "English", "es": "Español"}
+DEV_MODE = os.getenv("TEXTUAL_DEV") == "1"

@@ -30,7 +30,8 @@ MachineId {
         grid-size: 2;
         grid-rows: 1fr auto;
         grid-gutter: 1 2;
-        width: 60;
+        width: 1fr;
+        max-width: 60;
         height: 12;
         padding: 0 1;
         border: thick $background 80%;
@@ -39,12 +40,13 @@ MachineId {
 
         Label {
             column-span: 2;
-            width: 100%;
+            width: 1fr;
             content-align: center middle;
         }
 
         Button {
-            width: 100%;
+            width: 1fr;
+            height: auto;
         }
     }
 }
@@ -89,8 +91,9 @@ About {
 
     Grid {
         grid-size: 1;
-        height: 13;
-        width: 60;
+        height: 15;
+        width: 1fr;
+        max-width: 60;
         padding: 0 1;
         align: center middle;
         border: thick $background 80%;

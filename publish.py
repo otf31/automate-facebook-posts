@@ -142,41 +142,41 @@ class Publish(Screen):
         Horizontal {
             height: auto;
             margin-bottom: 1;
-            
+
             #stop {
                 display: none
             }
         }
-        
+
         #close {
             margin-top: 1;
         }
-        
+
         &.started #start {
             display: none
         }
-        
+
         &.started #stop {
             display: block
         }
-        
+
         &.started #close {
             display: none
         }
-        
+
         RichLog {
             height: 1fr;
         }
-        
+
         ProgressBar {
             display: none;
             margin-top: 1;
         }
-        
+
         &.started ProgressBar {
             display: block;
         }
-        
+
         #extra-info {
             display: none;
         }

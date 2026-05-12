@@ -31,6 +31,11 @@ class History(Screen):
     }
     """
 
+    def __init__(self):
+        super().__init__()
+
+        self.posts_folder_path = get_configuration_value("POSTS_FOLDER_PATH")
+
     def compose(self) -> ComposeResult:
         yield Label("History", classes="header")
         with Container():
@@ -39,13 +44,12 @@ class History(Screen):
             yield Button("Close", variant="error", action="app.pop_screen")
 
     def load(self):
-        posts_folder_path = get_configuration_value("POSTS_FOLDER_PATH")
         data_table = self.query_one(DataTable)
 
         # Clear data table, rows and columns
         data_table.clear(columns=True)
 
-        with open_fs(posts_folder_path) as posts_folder_fs:
+        with open_fs(self.posts_folder_path) as posts_folder_fs:
             try:
                 with posts_folder_fs.open(HiSTORY_FILE_PATH) as history_file:
                     reader = csv.reader(history_file, delimiter=";")

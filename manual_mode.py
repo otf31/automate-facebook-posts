@@ -20,7 +20,7 @@ class ManualMode(ModalScreen[None]):
     DEFAULT_CSS = """
     ManualMode {
         align: center middle;
-    
+
         Grid {
             grid-size: 1;
             grid-rows: 1fr auto;
@@ -35,7 +35,7 @@ class ManualMode(ModalScreen[None]):
                 height: 1fr;
                 content-align: center middle;
             }
-    
+
             Button {
                 width: 100%;
             }
