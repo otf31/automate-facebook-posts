@@ -6,7 +6,7 @@ from textual.containers import Grid
 from textual.screen import ModalScreen
 from textual.widgets import Button, Label
 
-from common_functions import get_configuration_value
+from common_functions import load_configuration
 from constants import FACEBOOK_URL
 
 MANUAL_MODE_INTRO = (
@@ -53,8 +53,9 @@ class ManualMode(ModalScreen[None]):
 
     @work
     async def launch_browser(self):
-        chrome_binary_path = get_configuration_value("CHROME_BINARY_PATH")
-        posts_folder_path = get_configuration_value("POSTS_FOLDER_PATH")
+        config = load_configuration()
+        chrome_binary_path = config["CHROME_BINARY_PATH"]
+        posts_folder_path = config["POSTS_FOLDER_PATH"]
         chrome_data_dir = fs.path.combine(posts_folder_path, "/profile")
         headless = False
 

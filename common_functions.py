@@ -3,7 +3,7 @@ import secrets
 from asyncio import sleep
 from json import JSONDecodeError
 from pathlib import Path
-from typing import Any, Callable, Literal
+from typing import Any, Callable, Literal, TypedDict
 
 import fs.path
 import rtoml
@@ -13,7 +13,13 @@ from rich.console import group
 from rich.panel import Panel
 from typing_extensions import TypeVar
 
-from constants import APP_NAME, CONFIG_FILE_PATH, CONFIG_KEYS_TYPES, DEFAULT_CONFIG
+from constants import APP_NAME, CONFIG_FILE_PATH, DEFAULT_CONFIG
+
+
+class Config(TypedDict):
+    CHROME_BINARY_PATH: str
+    POSTS_FOLDER_PATH: str
+    HEADLESS: bool
 
 
 class StyledPanel(Panel):
@@ -110,7 +116,7 @@ def validate_conf_file() -> None:
                     write_conf_file(DEFAULT_CONFIG)
 
 
-def load_configuration() -> dict[CONFIG_KEYS_TYPES, str | bool]:
+def load_configuration() -> Config:
     """
     Load a configuration file.
     :return: The configuration dictionary.
@@ -124,7 +130,7 @@ def load_configuration() -> dict[CONFIG_KEYS_TYPES, str | bool]:
     return config
 
 
-def write_conf_file(config: dict[str, str | bool]) -> None:
+def write_conf_file(config: Config) -> None:
     """
     Write a configuration file.
     :param config: The configuration dictionary.
@@ -132,17 +138,6 @@ def write_conf_file(config: dict[str, str | bool]) -> None:
     with UserConfigFS(APP_NAME) as user_config_fs:
         with user_config_fs.open(CONFIG_FILE_PATH, "w") as config_file:
             json.dump(config, config_file, indent=4)  # type: ignore
-
-
-def get_configuration_value(key: CONFIG_KEYS_TYPES) -> str | bool | None:
-    """
-    Get a configuration value.
-    :param key: The configuration key.
-    :return: The configuration value.
-    """
-    config = load_configuration()
-
-    return config[key]
 
 
 def get_locales_fb_strings(lang: str) -> dict[str, dict[str, str] | str]:

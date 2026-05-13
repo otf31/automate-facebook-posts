@@ -7,7 +7,7 @@ from textual.screen import Screen
 from textual.validation import ValidationResult, Validator
 from textual.widgets import Button, Input, Label, Switch
 
-from common_functions import load_configuration, write_conf_file
+from common_functions import load_configuration, write_conf_file, Config
 
 
 class ValidDir(Validator):
@@ -67,7 +67,7 @@ class Configuration(Screen):
         posts_folder.value = config["POSTS_FOLDER_PATH"]
         headless.value = config["HEADLESS"]
 
-        posts_folder.validate(str(posts_folder.value))
+        posts_folder.validate(posts_folder.value)
 
     def on_screen_resume(self) -> None:
         self.set_config_values()
@@ -85,10 +85,10 @@ class Configuration(Screen):
         posts_folder_path = self.query_one("#pfp", Input).value
         headless = self.query_one("#headless", Switch).value
 
-        config = {
+        config: Config = {
             "CHROME_BINARY_PATH": chrome_binary_path,
             "POSTS_FOLDER_PATH": posts_folder_path,
-            "HEADLESS": headless,
+            "HEADLESS": headless
         }
 
         write_conf_file(config)

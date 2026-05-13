@@ -25,7 +25,7 @@ async def is_logged_in(page: Page, expected_title_pattern: str) -> bool:
         return True
 
 
-async def get_fb_lang(page: Page) -> str | bool:
+async def get_fb_lang(page: Page) -> str | None:
     """
     Get the language of the Facebook user interface.
     :param page: The browser page instance.
@@ -35,12 +35,12 @@ async def get_fb_lang(page: Page) -> str | bool:
 
         lang = await page.locator("html").get_attribute("lang")
     except Error:
-        return False
+        return None
     else:
         if lang in SUPPORTED_FB_LANGUAGES:
             return lang
 
-    return False
+    return None
 
 
 async def navigate(page: Page, url: str) -> None:

@@ -21,9 +21,9 @@ from textual.widgets import Button, Label, ProgressBar, RichLog, Select
 from browser_utils import get_fb_lang, is_logged_in, navigate
 from common_functions import (
     StyledPanel,
-    get_configuration_value,
     get_locales_fb_strings,
     panels_group,
+    load_configuration,
     wait_random_seconds,
 )
 from constants import SUPPORTED_FB_LANGUAGES, HiSTORY_FILE_PATH
@@ -188,7 +188,9 @@ class Publish(Screen):
 
     def __init__(self):
         super().__init__()
-        self.posts_folder_path: str = get_configuration_value("POSTS_FOLDER_PATH")
+
+        config = load_configuration()
+        self.posts_folder_path: str = config["POSTS_FOLDER_PATH"]
         self.post_path: str | None = None
         self.images_folder_path: str | None = None
         self.descriptions_folder_path: str | None = None
@@ -196,7 +198,7 @@ class Publish(Screen):
         self.groups_file_path: str | None = None
         self.publication_filters: list[str] | None = None
         self.groups: list[list[str]] | None = None
-        self.num_groups: int | None = None
+        self.num_groups: int = 0
 
     def compose(self) -> ComposeResult:
         yield Label("Publish", classes="header")
@@ -296,10 +298,11 @@ class Publish(Screen):
 
     @work
     async def start_process(self, post: str) -> None:
-        chrome_binary_path = get_configuration_value("CHROME_BINARY_PATH")
-        posts_folder_path = get_configuration_value("POSTS_FOLDER_PATH")
+        config = load_configuration()
+        chrome_binary_path = config["CHROME_BINARY_PATH"]
+        posts_folder_path = config["POSTS_FOLDER_PATH"]
         chrome_data_dir = fs.path.combine(posts_folder_path, "/profile")
-        headless = get_configuration_value("HEADLESS")
+        headless = config["HEADLESS"]
         log = self.query_one(RichLog)
         progress_bar = self.query_one(ProgressBar)
 
@@ -462,15 +465,17 @@ class Publish(Screen):
 
                         if await pending_posts_el.is_visible():
                             pending_posts_text = await pending_posts_el.text_content()
-                            pending_posts = pending_posts_text.split()[0]
 
-                            groups_with_warnings.append(
-                                (
-                                    group_name,
-                                    group_url,
-                                    f"Group has {pending_posts} pending posts",
+                            if pending_posts_text:
+                                pending_posts = pending_posts_text.split()[0]
+
+                                groups_with_warnings.append(
+                                    (
+                                        group_name,
+                                        group_url,
+                                        f"Group has {pending_posts} pending posts",
+                                    )
                                 )
-                            )
 
                         if await write_something.is_visible():
                             await write_something.click(force=True)
@@ -728,12 +733,10 @@ class Publish(Screen):
 
     def load_options(self):
         try:
-            if (
-                posts_folder_path := get_configuration_value("POSTS_FOLDER_PATH")
-            ) == "":
+            if self.posts_folder_path == "":
                 raise CreateFailed
 
-            with open_fs(posts_folder_path) as posts_folder_fs:
+            with open_fs(self.posts_folder_path) as posts_folder_fs:
                 # Find available posts
                 for folder in posts_folder_fs.filterdir(
                     "/", exclude_files=["*"], exclude_dirs=["profile"]

@@ -1,11 +1,10 @@
 import os
 import platform
-from typing import Literal
 
 from _version import __version__
 
 OWNER = "otf31"
-REPOSITORY_NAME = "automate-facebook-posts"
+REPOSITORY_NAME = "autofbpost"
 EMAIL = "otf31x@outlook.com"
 REPOSITORY_URL = f"https://github.com/{OWNER}/{REPOSITORY_NAME}"
 GITHUB_RELEASE_API = f"https://api.github.com/repos/{OWNER}/{REPOSITORY_NAME}/releases/latest"
@@ -21,7 +20,6 @@ CHROME_BINARY_PATH = (
 APP_NAME = "autofbpost"
 CONFIG_FILE_PATH = "config.json"
 HiSTORY_FILE_PATH = "log.csv"
-CONFIG_KEYS_TYPES = Literal["CHROME_BINARY_PATH", "POSTS_FOLDER_PATH", "HEADLESS"]
 DEFAULT_CONFIG = {
     "CHROME_BINARY_PATH": CHROME_BINARY_PATH,
     "POSTS_FOLDER_PATH": "",

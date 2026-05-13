@@ -7,7 +7,7 @@ from textual.containers import Center, Container
 from textual.screen import Screen
 from textual.widgets import Button, DataTable, Label
 
-from common_functions import get_configuration_value
+from common_functions import load_configuration
 from constants import HiSTORY_FILE_PATH
 
 
@@ -34,7 +34,8 @@ class History(Screen):
     def __init__(self):
         super().__init__()
 
-        self.posts_folder_path = get_configuration_value("POSTS_FOLDER_PATH")
+        config = load_configuration()
+        self.posts_folder_path = config["POSTS_FOLDER_PATH"]
 
     def compose(self) -> ComposeResult:
         yield Label("History", classes="header")
